@@ -152,7 +152,14 @@
         // --- Firebase初期化と認証 ---
         async function initializeFirebase() {
             // 本番環境では実際のconfigを使用
-            const firebaseConfig = { apiKey: "AIza...", authDomain: "...", projectId: "...", ...};
+            const firebaseConfig = {
+                  apiKey: "AIzaSyBEp2wuVwup6lyrUYVxim4EuQLrrKgBFTk",
+                  authDomain: "gumdamhexbattle.firebaseapp.com",
+                  projectId: "gumdamhexbattle",
+                  storageBucket: "gumdamhexbattle.firebasestorage.app",
+                  messagingSenderId: "828995733517",
+                  appId: "1:828995733517:web:29d2ff0781257a2df5ad44"
+            };
             firebaseApp = initializeApp(firebaseConfig);
             auth = getAuth(firebaseApp);
             db = getFirestore(firebaseApp);
