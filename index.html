@@ -381,7 +381,9 @@
                             renderGameUI();
                             break;
                     }
-                    checkAllPlayersReady(); // Check readiness on every update
+                    if (gameData.status === 'mission_briefing' || gameData.status === 'deck_building') {
+                        checkAllPlayersReady();
+                    }
                 } else {
                     alert("ゲームが終了または削除されました。");
                     if(gameUnsubscribe) gameUnsubscribe();
@@ -417,8 +419,7 @@
 
         async function updatePlayerName(playerId, newName) {
             if (!localGameState.gameId || !playerId || !newName) return;
-            const gameRef = doc(db, 'games', localGameState.gameId);
-            await updateDoc(gameRef, { [`players.${playerId}.name`]: newName });
+            await updateDoc(doc(db, 'games', localGameState.gameId), { [`players.${playerId}.name`]: newName });
         }
 
         function copyGameCode() {
@@ -544,13 +545,15 @@
         function dealInitialCards(playersData) {
             Object.values(playersData).forEach(player => {
                 const side = player.side;
+                const shuffledMS = [...allCards.ms.filter(c => c.side === side)].sort(() => 0.5 - Math.random());
+                
                 player.hand = {
                     warships: [...allCards.warship.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 2).map(c => ({...c, handId: `warship-${c.id}-${Math.random()}`})),
-                    ms: [...allCards.ms.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 8).map(c => ({...c, handId: `ms-${c.id}-${Math.random()}`, pilot: null})),
+                    ms: shuffledMS.slice(0, 8).map(c => ({...c, handId: `ms-${c.id}-${Math.random()}`, pilot: null})),
                     pilots: [...allCards.pilot.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 3).map(c => ({...c, handId: `pilot-${c.id}-${Math.random()}`})),
                 };
                 player.graveyard = [];
-                player.deck = []; // Finalized deck
+                player.deck = [];
             });
         }
         
@@ -583,7 +586,7 @@
 
             ui.game.handArea.innerHTML = `
                 <div class="w-full">
-                    <h4 class="text-sm font-bold text-gray-400 mb-2">MS/MA (クリックして捨てる)</h4>
+                    <h4 class="text-sm font-bold text-gray-400 mb-2">MS/MA (クリックしてコスト10以下にする)</h4>
                     <div class="flex space-x-2">${msHtml}</div>
                     <h4 class="text-sm font-bold text-gray-400 mt-4 mb-2">パイロット (ドラッグしてMSに乗せる)</h4>
                     <div class="flex space-x-2">${pilotsHtml}</div>
@@ -601,15 +604,13 @@
             if (type === 'ms' && card.pilot) {
                 pilotInfo = `<img src="${card.pilot.img}" class="w-6 h-6 rounded-full absolute -top-1 -right-1 border-2 border-yellow-400">`;
             }
-
             return `
                 <div data-hand-id="${card.handId}" data-card-type="${type}" draggable="${type === 'pilot'}" class="hand-card ${type}-card bg-gray-800 p-2 rounded w-32 flex-shrink-0 relative">
                     <img src="${card.img}" class="w-full h-16 object-cover rounded-sm mb-2 pointer-events-none" onerror="this.onerror=null;this.src='${placeholderImg}';">
                     <p class="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis pointer-events-none">${card.name}</p>
                     ${type === 'ms' ? `<p class="text-xs text-gray-400 pointer-events-none">Cost: ${card.cost}</p>` : ''}
                     ${pilotInfo}
-                </div>
-            `;
+                </div>`;
         }
 
         function addDeckBuildingEventListeners() {
@@ -646,7 +647,6 @@
             const msCard = player.hand.ms.find(m => m.handId === msHandId);
             if (!pilotCard || !msCard) return;
 
-            // Un-assign pilot if already on another MS
             player.hand.ms.forEach(m => {
                 if(m.pilot && m.pilot.handId === draggedPilotId) m.pilot = null;
             });
