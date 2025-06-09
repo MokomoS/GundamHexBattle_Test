@@ -20,11 +20,15 @@
         .unit.zeon { border-color: #4ade80; }
         .unit.selected { border-color: #facc15; transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 15px #facc15; z-index: 20; }
         .unit.acted { filter: grayscale(80%); }
-        .hand-card { cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; }
+        .hand-card { cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; position: relative; }
         .hand-card:hover { transform: translateY(-5px) scale(1.05); }
         .hand-card.selected { border-color: #facc15; box-shadow: 0 0 10px #facc15; }
+        .hand-card.discard { opacity: 0.5; border-color: #f87171; }
         .modal { backdrop-filter: blur(5px); }
-        .pilot-slot { border: 1px dashed #6b7280; min-height: 40px; }
+        .pilot-slot { border: 1px dashed #6b7280; min-height: 40px; border-radius: 0.25rem; }
+        .pilot-card { cursor: grab; }
+        .pilot-card:active { cursor: grabbing; }
+        .cost-over { color: #f87171; }
     </style>
 </head>
 <body class="p-1 md:p-2">
@@ -142,16 +146,13 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- グローバル変数と定数 ---
-        const BOARD_COLS = 20;
-        const BOARD_ROWS = 12;
-        const placeholderImg = 'https://placehold.co/50x50/e2e8f0/4a5568?text=MS';
-        
         let firebaseApp, auth, db;
         let localGameState = {};
         let localPlayerId = null;
         let gameUnsubscribe = null;
         let selectedHandCardId = null;
         let selectedUnitId = null;
+        let draggedPilotId = null;
 
         const ui = {
             titleScreen: document.getElementById('title-screen-modal'),
@@ -203,8 +204,8 @@
         
         const allCards = {
              warship: [
-                {id: 'WB', name: 'ホワイトベース', side: 'federation', hp: 200, move: 4, capacity: 6},
-                {id: 'Musai', name: 'ムサイ', side: 'zeon', hp: 150, move: 4, capacity: 4},
+                {id: 'WB', name: 'ホワイトベース', side: 'federation', hp: 200, move: 4, capacity: 6, img: 'https://www.gundam.jp/tv/world/mechanic/images/me_whitebase.png'},
+                {id: 'Musai', name: 'ムサイ', side: 'zeon', hp: 150, move: 4, capacity: 4, img: 'https://www.gundam.jp/tv/world/mechanic/images/me_musai.png'},
              ],
              ms: [
                 { id: 'RX-78-2', name: "RX-78-2 ガンダム", side: 'federation', cost: 3, hp: 55, en: 40, move: 6, weapons: [{name: 'Beam Rifle', range: 5, damage: 20}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gundam.png'},
@@ -213,8 +214,8 @@
                 { id: 'MS-06S', name: "シャア専用ザクII", side: 'zeon', cost: 2, hp: 35, en: 30, move: 7, weapons: [{name: 'Machine Gun', range: 4, damage: 12}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_charzaku.png'},
              ],
              pilot: [
-                {id: 'Amuro', name: 'アムロ・レイ', side: 'federation', skill: '命中&回避+1'},
-                {id: 'Char', name: 'シャア・アズナブル', side: 'zeon', skill: '移動+1'},
+                {id: 'Amuro', name: 'アムロ・レイ', side: 'federation', skill: '命中&回避+1', img: 'https://www.gundam.jp/tv/world/character/images/ch_amuro.png'},
+                {id: 'Char', name: 'シャア・アズナブル', side: 'zeon', skill: '移動+1', img: 'https://www.gundam.jp/tv/world/character/images/ch_char.png'},
              ]
         };
         const scenarios = {
@@ -249,7 +250,7 @@
             };
 
             try {
-                if (!firebaseApp) {
+                if (!db) { 
                     firebaseApp = initializeApp(firebaseConfig);
                     auth = getAuth(firebaseApp);
                     db = getFirestore(firebaseApp);
@@ -285,18 +286,16 @@
             }
         }
         
-        // --- UI表示切り替え ---
         function showJoinUI() { ui.lobby.initial.classList.add('hidden'); ui.lobby.joinUI.classList.remove('hidden'); };
         function showInitialUI() { ui.lobby.joinUI.classList.add('hidden'); ui.lobby.initial.classList.remove('hidden'); };
         
-        // --- ゲーム作成と参加 ---
         async function createGame() {
             if (!localPlayerId) { alert("認証が完了していません。"); return; }
             ui.lobby.createGameBtn.disabled = true;
 
             try {
                 const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
-                const hostPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: true, diceRoll: null, isReady: false };
+                const hostPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: true, diceRoll: null, isReady: false, deck: {} };
                 const initialGameState = {
                     gameId: gameId,
                     status: 'lobby',
@@ -333,7 +332,7 @@
                 if (gameSnap.exists()) {
                     const gameData = gameSnap.data();
                     if (Object.keys(gameData.players).length >= 4) { ui.lobby.error.textContent = "このゲームは満員です。"; return; }
-                    const newPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: false, diceRoll: null, isReady: false };
+                    const newPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: false, diceRoll: null, isReady: false, deck: {} };
                     await updateDoc(gameRef, { [`players.${localPlayerId}`]: newPlayer });
                     await attachToGame(gameId);
                 } else {
@@ -376,6 +375,8 @@
                         case 'placement':
                         case 'playing':
                             ui.mission.modal.classList.add('hidden');
+                            ui.lobby.modal.classList.add('hidden');
+                            ui.sideSelection.modal.classList.add('hidden');
                             ui.game.container.classList.remove('hidden');
                             renderGameUI();
                             break;
@@ -419,23 +420,19 @@
         async function updatePlayerName(playerId, newName) {
             if (!localGameState.gameId || !playerId) return;
             const gameRef = doc(db, 'games', localGameState.gameId);
-            await updateDoc(gameRef, {
-                [`players.${playerId}.name`]: newName
-            });
+            await updateDoc(gameRef, { [`players.${playerId}.name`]: newName });
         }
 
         function copyGameCode() {
-            const code = ui.lobby.codeDisplay.textContent;
-            navigator.clipboard.writeText(code).then(() => {
+            navigator.clipboard.writeText(ui.lobby.codeDisplay.textContent).then(() => {
                 ui.lobby.copyCodeBtn.textContent = 'コピー完了!';
                 setTimeout(() => { ui.lobby.copyCodeBtn.textContent = 'コピー'; }, 2000);
-            }).catch(err => console.error('コピーに失敗しました', err));
+            });
         }
         
         async function startGame() {
             if (!localGameState || !localGameState.gameId) return;
-            const gameRef = doc(db, 'games', localGameState.gameId);
-            await updateDoc(gameRef, { status: 'side_selection' });
+            await updateDoc(doc(db, 'games', localGameState.gameId), { status: 'side_selection' });
         };
         
         function renderSideSelection() {
@@ -446,14 +443,14 @@
                 if (p.id === localPlayerId && !p.diceRoll) {
                     rollButton = `<button data-player-id="${p.id}" class="roll-dice-btn bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-1 px-3 rounded ml-4">ダイスを振る</button>`;
                 }
-                return `<div>${p.name}: <span class="text-2xl font-bold">${p.diceRoll || '?'}</span>${rollButton}</div>`;
+                return `<div class="p-2">${p.name}: <span class="text-2xl font-bold">${p.diceRoll || '?'}</span>${rollButton}</div>`;
             }).join('');
             
             document.querySelectorAll('.roll-dice-btn').forEach(btn => btn.addEventListener('click', rollDice));
             
             const allRolled = players.every(p => p.diceRoll);
             if(allRolled) {
-                const winner = players.reduce((a, b) => a.diceRoll >= b.diceRoll ? a : b); // Handle ties by giving it to first player
+                const winner = players.reduce((a, b) => a.diceRoll >= b.diceRoll ? a : b); 
                  if(winner.id === localPlayerId) {
                      ui.sideSelection.sideChoiceArea.classList.remove('hidden');
                  } else {
@@ -465,11 +462,9 @@
         
         async function rollDice(event) {
             const playerId = event.target.dataset.playerId;
+            event.target.disabled = true;
             const roll = Math.floor(Math.random() * 6) + 1;
-            const gameRef = doc(db, 'games', localGameState.gameId);
-            await updateDoc(gameRef, {
-                [`players.${playerId}.diceRoll`]: roll,
-            });
+            await updateDoc(doc(db, 'games', localGameState.gameId), { [`players.${playerId}.diceRoll`]: roll });
         }
 
         async function chooseSide(side) {
@@ -488,7 +483,6 @@
                 updates[`players.${id}.side`] = (fedCount < fedMax) ? 'federation' : 'zeon';
                 if (updates[`players.${id}.side`] === 'federation') fedCount++;
             });
-
             updates.status = 'mission_briefing';
             await updateDoc(gameRef, updates);
         }
@@ -512,8 +506,7 @@
         }
 
         async function confirmMission() {
-             const gameRef = doc(db, 'games', localGameState.gameId);
-             await updateDoc(gameRef, { [`players.${localPlayerId}.isReady`]: true });
+             await updateDoc(doc(db, 'games', localGameState.gameId), { [`players.${localPlayerId}.isReady`]: true });
         }
         
         function checkAllPlayersReady() {
@@ -530,17 +523,17 @@
                 nextStatus = 'deck_building';
                 logMessage = "全プレイヤー作戦目標確認。デッキ構築を開始します。";
                 
-                const playersReset = localGameState.players;
-                Object.keys(playersReset).forEach(k => {
-                    playersReset[k].isReady = false; 
-                    playersReset[k].diceRoll = null;
+                let playersData = localGameState.players;
+                Object.keys(playersData).forEach(k => {
+                    playersData[k].isReady = false; 
+                    playersData[k].diceRoll = null;
                 });
                 
-                dealInitialCards(playersReset);
+                dealInitialCards(playersData);
                 
                 updateDoc(gameRef, { 
                     status: nextStatus,
-                    players: playersReset,
+                    players: playersData,
                     log: [...localGameState.log, logMessage]
                 });
             }
@@ -549,23 +542,135 @@
         function dealInitialCards(playersData) {
             Object.values(playersData).forEach(player => {
                 const side = player.side;
-                player.hand = {
-                    warships: allCards.warship.filter(c => c.side === side).slice(0, 2).map(c => ({...c, handId: `warship-${c.id}-${Math.random()}`})),
-                    ms: allCards.ms.filter(c => c.side === side).sort(() => 0.5 - Math.random()).slice(0, 8).map(c => ({...c, handId: `ms-${c.id}-${Math.random()}`})),
-                    pilots: allCards.pilot.filter(c => c.side === side).sort(() => 0.5 - Math.random()).slice(0, 3).map(c => ({...c, handId: `pilot-${c.id}-${Math.random()}`})),
+                const hand = {
+                    warships: [],
+                    ms: [],
+                    pilots: [],
                 };
+                const shuffledWarships = [...allCards.warship.filter(c => c.side === side)].sort(() => 0.5 - Math.random());
+                const shuffledMS = [...allCards.ms.filter(c => c.side === side)].sort(() => 0.5 - Math.random());
+                const shuffledPilots = [...allCards.pilot.filter(c => c.side === side)].sort(() => 0.5 - Math.random());
+                
+                hand.warships = shuffledWarships.slice(0, 2).map(c => ({...c, handId: `warship-${c.id}-${Math.random()}`}));
+                hand.ms = shuffledMS.slice(0, 8).map(c => ({...c, handId: `ms-${c.id}-${Math.random()}`, pilot: null}));
+                hand.pilots = shuffledPilots.slice(0, 3).map(c => ({...c, handId: `pilot-${c.id}-${Math.random()}`}));
+
+                player.hand = hand;
                 player.graveyard = [];
+                player.deck = []; // Finalized deck
             });
         }
         
-        // --- ゲームUIレンダリング ---
         function renderGameUI() {
             renderBoard();
             renderAllUnits();
             renderPlayerInfo();
-            renderHand();
             updateGameInfo();
             updateLog();
+            
+            if (localGameState.phase === 'deck_building') {
+                renderDeckBuilding();
+            }
+        }
+
+        function renderDeckBuilding() {
+            const player = localGameState.players?.[localPlayerId];
+            if (!player || !player.hand) return;
+            
+            let totalCost = player.hand.ms.reduce((sum, ms) => sum + ms.cost, 0);
+
+            ui.game.deckBuildInfo.innerHTML = `
+                <span class="mr-4">MSコスト: <span class="${totalCost > 10 ? 'cost-over' : ''}">${totalCost}</span> / 10</span>
+                <button id="confirm-deck-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded disabled:bg-gray-500" ${totalCost > 10 ? 'disabled' : ''}>デッキ確定</button>
+            `;
+            document.getElementById('confirm-deck-btn').addEventListener('click', confirmDeck);
+
+            const warshipsHtml = player.hand.warships.map(c => renderCard(c, 'warship')).join('');
+            const msHtml = player.hand.ms.map(c => renderCard(c, 'ms')).join('');
+            const pilotsHtml = player.hand.pilots.map(c => renderCard(c, 'pilot')).join('');
+
+            ui.game.handArea.innerHTML = `
+                <div class="w-full">
+                    <h4 class="text-sm font-bold text-gray-400 mb-2">MS/MA (クリックして捨てる)</h4>
+                    <div class="flex space-x-2">${msHtml}</div>
+                    <h4 class="text-sm font-bold text-gray-400 mt-4 mb-2">パイロット (ドラッグしてMSに乗せる)</h4>
+                    <div class="flex space-x-2">${pilotsHtml}</div>
+                    <h4 class="text-sm font-bold text-gray-400 mt-4 mb-2">戦艦</h4>
+                    <div class="flex space-x-2">${warshipsHtml}</div>
+                </div>
+            `;
+            addDeckBuildingEventListeners();
+        }
+
+        function renderCard(card, type) {
+            let pilotInfo = '';
+            if (type === 'ms' && card.pilot) {
+                pilotInfo = `<img src="${card.pilot.img}" class="w-6 h-6 rounded-full absolute -top-1 -right-1 border-2 border-yellow-400">`;
+            }
+
+            return `
+                <div data-hand-id="${card.handId}" data-card-type="${type}" draggable="${type === 'pilot'}" class="hand-card ${type}-card bg-gray-800 p-2 rounded w-32 flex-shrink-0 relative">
+                    <img src="${card.img}" class="w-full h-16 object-cover rounded-sm mb-2 pointer-events-none" onerror="this.onerror=null;this.src='${placeholderImg}';">
+                    <p class="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis pointer-events-none">${card.name}</p>
+                    ${type === 'ms' ? `<p class="text-xs text-gray-400 pointer-events-none">Cost: ${card.cost}</p>` : ''}
+                    ${pilotInfo}
+                    <div class="pilot-slot mt-1 p-1 bg-gray-700 hidden"></div>
+                </div>
+            `;
+        }
+
+        function addDeckBuildingEventListeners() {
+            document.querySelectorAll('.ms-card').forEach(cardEl => {
+                cardEl.addEventListener('click', () => discardMsCard(cardEl.dataset.handId));
+                cardEl.addEventListener('dragover', (e) => e.preventDefault());
+                cardEl.addEventListener('drop', (e) => dropPilotOnMs(e, cardEl.dataset.handId));
+            });
+            document.querySelectorAll('.pilot-card').forEach(cardEl => {
+                cardEl.addEventListener('dragstart', (e) => (draggedPilotId = cardEl.dataset.handId));
+            });
+        }
+        
+        async function discardMsCard(handId) {
+            const player = localGameState.players[localPlayerId];
+            const cardToDiscard = player.hand.ms.find(c => c.handId === handId);
+            if (!cardToDiscard) return;
+
+            const newMsHand = player.hand.ms.filter(c => c.handId !== handId);
+            const newGraveyard = [...(player.graveyard || []), cardToDiscard];
+            
+            await updateDoc(doc(db, 'games', localGameState.gameId), {
+                [`players.${localPlayerId}.hand.ms`]: newMsHand,
+                [`players.${localPlayerId}.graveyard`]: newGraveyard,
+            });
+        }
+
+        async function dropPilotOnMs(event, msHandId) {
+            event.preventDefault();
+            if (!draggedPilotId) return;
+
+            const player = localGameState.players[localPlayerId];
+            const pilotCard = player.hand.pilots.find(p => p.handId === draggedPilotId);
+            const msCard = player.hand.ms.find(m => m.handId === msHandId);
+            if (!pilotCard || !msCard) return;
+
+            msCard.pilot = pilotCard;
+            const newPilotsHand = player.hand.pilots.filter(p => p.handId !== draggedPilotId);
+            
+            await updateDoc(doc(db, 'games', localGameState.gameId), {
+                 [`players.${localPlayerId}.hand.ms`]: player.hand.ms,
+                 [`players.${localPlayerId}.hand.pilots`]: newPilotsHand,
+            });
+            draggedPilotId = null;
+        }
+
+        async function confirmDeck() {
+            const player = localGameState.players[localPlayerId];
+            const finalDeck = [...player.hand.warships, ...player.hand.ms];
+
+            await updateDoc(doc(db, 'games', localGameState.gameId), {
+                [`players.${localPlayerId}.deck`]: finalDeck,
+                [`players.${localPlayerId}.isReady`]: true,
+            });
         }
 
         function renderBoard() {
@@ -583,77 +688,27 @@
             }
         }
         
-        function renderAllUnits() {
-            document.querySelectorAll('.unit').forEach(u => u.remove());
-            localGameState.units?.forEach(unit => {
-                const hex = document.querySelector(`.hex[data-x='${unit.x}'][data-y='${unit.y}']`);
-                if (hex) {
-                    const unitEl = document.createElement('div');
-                    unitEl.id = unit.id;
-                    unitEl.classList.add('unit', unit.side);
-                    if (unit.hasActed) unitEl.classList.add('acted');
-                    if (unit.id === selectedUnitId) unitEl.classList.add('selected');
-                    unitEl.style.backgroundImage = `url(${unit.img || placeholderImg})`;
-                    unitEl.addEventListener('click', (e) => { e.stopPropagation(); onUnitClick(unit.id); });
-                    hex.appendChild(unitEl);
-                }
-            });
-        }
-
-        function renderPlayerInfo() {
-            const player = localGameState.players?.[localPlayerId];
-            if (!player) return;
-            const sideColor = player.side === 'federation' ? 'text-blue-400' : 'text-green-400';
-            ui.game.playerInfo.innerHTML = `<h3 class="font-bold text-lg text-center ${sideColor}">${player.name} (${player.side === 'federation' ? '地球連邦軍' : 'ジオン公国軍'})</h3>`;
-        }
-        
-        function renderHand() {
-            // This function will need significant changes to handle the new game flow (deck building, placement)
-        }
-        
-        function updateGameInfo() {
-            if(!localGameState || !localGameState.players) return;
-            ui.game.turnIndicator.textContent = `TURN ${localGameState.turn || 1}`;
-            const phaseMap = {DECK_BUILDING: 'デッキ構築', PLACEMENT: '配置フェーズ', STRATEGY: '戦略フェーズ' };
-            ui.game.phaseIndicator.textContent = phaseMap[localGameState.phase] || '待機中';
-
-            const player = localGameState.players?.[localPlayerId];
-            const isMyTurn = localGameState.currentPlayerSide === player?.side;
-            const canEndPhase = localGameState.phase === 'PLACEMENT'; 
-            ui.game.endPhaseBtn.disabled = !isMyTurn && !canEndPhase;
-            ui.game.endPhaseBtn.textContent = isMyTurn || canEndPhase ? "フェーズ終了" : "相手ターン";
-        }
-        
-        function updateLog() {
-            if(!ui.game.logMessages || !localGameState.log) return;
-            ui.game.logMessages.innerHTML = localGameState.log.slice(-20).map(msg => `<div>${msg}</div>`).join('');
-            ui.game.logMessages.scrollTop = ui.game.logMessages.scrollHeight;
-        }
-
-        // --- ゲーム内アクション ---
-        function onHandCardClick(handId) {}
         function onUnitClick(unitId) {
             const unit = localGameState.units.find(u => u.id === unitId);
             if (!unit) return;
             selectedUnitId = unit.id;
             renderAllUnits();
 
+            let pilotInfoHtml = unit.pilot ? `<h6 class="font-bold mt-2 text-yellow-400">搭乗員: ${unit.pilot.name}</h6><p class="text-sm pl-2">${unit.pilot.skill}</p>` : '';
             const weaponInfo = unit.weapons.map(w => `<li>${w.name} (威力:${w.damage} 射程:${w.range})</li>`).join('');
+            
             ui.game.unitInfo.innerHTML = `
                 <h4 class="font-bold text-lg">${unit.name}</h4>
                 <p>HP: ${unit.currentHp} / ${unit.hp}</p>
                 <p>EN: ${unit.en}</p>
                 <p>移動力: ${unit.move}</p>
+                ${pilotInfoHtml}
                 <h5 class="font-bold mt-2">武装:</h5>
                 <ul class="list-disc list-inside text-sm">${weaponInfo}</ul>
             `;
             ui.game.unitInfo.classList.remove('hidden');
         }
-        async function onHexClick(x, y) {}
-        async function endPhase() {}
-        function highlightPlacementZone(zone) {}
-        function clearHighlights() {}
-        
+
         // --- イベントリスナーの登録 ---
         document.addEventListener('DOMContentLoaded', () => {
             ui.startAuthBtn.addEventListener('click', handleGameStart);
@@ -666,7 +721,7 @@
             ui.sideSelection.chooseFedBtn.addEventListener('click', () => chooseSide('federation'));
             ui.sideSelection.chooseZeonBtn.addEventListener('click', () => chooseSide('zeon'));
             ui.mission.confirmBtn.addEventListener('click', confirmMission);
-            ui.game.endPhaseBtn.addEventListener('click', endPhase);
+            ui.game.endPhaseBtn.addEventListener('click', () => {}); // Placeholder
             
             ui.lobby.playerList.addEventListener('change', (event) => {
                 const target = event.target;
