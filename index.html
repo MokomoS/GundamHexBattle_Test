@@ -381,9 +381,7 @@
                             renderGameUI();
                             break;
                     }
-                    if (gameData.status === 'mission_briefing') {
-                        checkAllPlayersReady();
-                    }
+                    checkAllPlayersReady(); // Check readiness on every update
                 } else {
                     alert("ゲームが終了または削除されました。");
                     if(gameUnsubscribe) gameUnsubscribe();
@@ -418,7 +416,7 @@
         }
 
         async function updatePlayerName(playerId, newName) {
-            if (!localGameState.gameId || !playerId) return;
+            if (!localGameState.gameId || !playerId || !newName) return;
             const gameRef = doc(db, 'games', localGameState.gameId);
             await updateDoc(gameRef, { [`players.${playerId}.name`]: newName });
         }
@@ -519,18 +517,22 @@
             let nextStatus = '';
             let logMessage = '';
 
+            let playersData = localGameState.players;
+            Object.keys(playersData).forEach(k => {
+                playersData[k].isReady = false; 
+            });
+
             if (currentStatus === 'mission_briefing') {
                 nextStatus = 'deck_building';
                 logMessage = "全プレイヤー作戦目標確認。デッキ構築を開始します。";
-                
-                let playersData = localGameState.players;
-                Object.keys(playersData).forEach(k => {
-                    playersData[k].isReady = false; 
-                    playersData[k].diceRoll = null;
-                });
-                
+                Object.keys(playersData).forEach(k => { playersData[k].diceRoll = null; });
                 dealInitialCards(playersData);
-                
+            } else if (currentStatus === 'deck_building') {
+                nextStatus = 'placement';
+                logMessage = "全プレイヤーデッキ確定。ユニット配置を開始します。";
+            }
+            
+            if (nextStatus) {
                 updateDoc(gameRef, { 
                     status: nextStatus,
                     players: playersData,
@@ -542,20 +544,11 @@
         function dealInitialCards(playersData) {
             Object.values(playersData).forEach(player => {
                 const side = player.side;
-                const hand = {
-                    warships: [],
-                    ms: [],
-                    pilots: [],
+                player.hand = {
+                    warships: [...allCards.warship.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 2).map(c => ({...c, handId: `warship-${c.id}-${Math.random()}`})),
+                    ms: [...allCards.ms.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 8).map(c => ({...c, handId: `ms-${c.id}-${Math.random()}`, pilot: null})),
+                    pilots: [...allCards.pilot.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 3).map(c => ({...c, handId: `pilot-${c.id}-${Math.random()}`})),
                 };
-                const shuffledWarships = [...allCards.warship.filter(c => c.side === side)].sort(() => 0.5 - Math.random());
-                const shuffledMS = [...allCards.ms.filter(c => c.side === side)].sort(() => 0.5 - Math.random());
-                const shuffledPilots = [...allCards.pilot.filter(c => c.side === side)].sort(() => 0.5 - Math.random());
-                
-                hand.warships = shuffledWarships.slice(0, 2).map(c => ({...c, handId: `warship-${c.id}-${Math.random()}`}));
-                hand.ms = shuffledMS.slice(0, 8).map(c => ({...c, handId: `ms-${c.id}-${Math.random()}`, pilot: null}));
-                hand.pilots = shuffledPilots.slice(0, 3).map(c => ({...c, handId: `pilot-${c.id}-${Math.random()}`}));
-
-                player.hand = hand;
                 player.graveyard = [];
                 player.deck = []; // Finalized deck
             });
@@ -568,9 +561,9 @@
             updateGameInfo();
             updateLog();
             
-            if (localGameState.phase === 'deck_building') {
-                renderDeckBuilding();
-            }
+            const phase = localGameState.phase;
+            if (phase === 'deck_building') renderDeckBuilding();
+            else if (phase === 'placement') renderPlacement();
         }
 
         function renderDeckBuilding() {
@@ -585,7 +578,6 @@
             `;
             document.getElementById('confirm-deck-btn').addEventListener('click', confirmDeck);
 
-            const warshipsHtml = player.hand.warships.map(c => renderCard(c, 'warship')).join('');
             const msHtml = player.hand.ms.map(c => renderCard(c, 'ms')).join('');
             const pilotsHtml = player.hand.pilots.map(c => renderCard(c, 'pilot')).join('');
 
@@ -595,11 +587,13 @@
                     <div class="flex space-x-2">${msHtml}</div>
                     <h4 class="text-sm font-bold text-gray-400 mt-4 mb-2">パイロット (ドラッグしてMSに乗せる)</h4>
                     <div class="flex space-x-2">${pilotsHtml}</div>
-                    <h4 class="text-sm font-bold text-gray-400 mt-4 mb-2">戦艦</h4>
-                    <div class="flex space-x-2">${warshipsHtml}</div>
                 </div>
             `;
             addDeckBuildingEventListeners();
+        }
+
+        function renderPlacement() {
+            // TODO: Render placement UI
         }
 
         function renderCard(card, type) {
@@ -614,7 +608,6 @@
                     <p class="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis pointer-events-none">${card.name}</p>
                     ${type === 'ms' ? `<p class="text-xs text-gray-400 pointer-events-none">Cost: ${card.cost}</p>` : ''}
                     ${pilotInfo}
-                    <div class="pilot-slot mt-1 p-1 bg-gray-700 hidden"></div>
                 </div>
             `;
         }
@@ -653,12 +646,15 @@
             const msCard = player.hand.ms.find(m => m.handId === msHandId);
             if (!pilotCard || !msCard) return;
 
+            // Un-assign pilot if already on another MS
+            player.hand.ms.forEach(m => {
+                if(m.pilot && m.pilot.handId === draggedPilotId) m.pilot = null;
+            });
+
             msCard.pilot = pilotCard;
-            const newPilotsHand = player.hand.pilots.filter(p => p.handId !== draggedPilotId);
             
             await updateDoc(doc(db, 'games', localGameState.gameId), {
                  [`players.${localPlayerId}.hand.ms`]: player.hand.ms,
-                 [`players.${localPlayerId}.hand.pilots`]: newPilotsHand,
             });
             draggedPilotId = null;
         }
@@ -676,8 +672,8 @@
         function renderBoard() {
             if (ui.game.board.children.length > 0) return;
             ui.game.board.innerHTML = '';
-            for (let r = 0; r < BOARD_ROWS; r++) {
-                for (let c = 0; c < BOARD_COLS; c++) {
+            for (let r = 0; r < 12; r++) { // BOARD_ROWS
+                for (let c = 0; c < 20; c++) { // BOARD_COLS
                     const hex = document.createElement('div');
                     hex.classList.add('hex');
                     hex.dataset.x = c;
