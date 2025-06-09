@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>機動戦士ガンダム 一年戦争～HEX BATTLE～</title>
+    <title>機動戦士ガンダム 一年戦争オンラインボードゲーム</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -27,24 +27,37 @@
     </style>
 </head>
 <body class="p-2 md:p-4">
-    <!-- Lobby Modal -->
-    <div id="lobby-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+
+    <!-- Title Screen Modal -->
+    <div id="title-screen-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
-            <h2 class="text-3xl font-bold mb-6 font-roberto-mono">一年戦争オンライン</h2>
+            <h1 class="text-4xl font-bold mb-2 font-roberto-mono text-yellow-300">一年戦争</h1>
+            <h2 class="text-xl font-bold mb-8 font-roberto-mono">HEX BATTLE</h2>
+            <button id="start-auth-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors">ゲームスタート</button>
+            <p id="auth-loading-text" class="text-sm text-gray-400 mt-4 hidden">認証中...</p>
+        </div>
+    </div>
+
+
+    <!-- Lobby Modal -->
+    <div id="lobby-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+            <h2 class="text-3xl font-bold mb-6 font-roberto-mono">オンラインロビー</h2>
             <div id="initial-options">
-                <button onclick="createGame()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded mb-4 transition-colors">ゲームを作成</button>
-                <button onclick="showJoinUI()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition-colors">ゲームに参加</button>
+                <button id="create-game-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded mb-4 transition-colors">ゲームを作成</button>
+                <button id="show-join-ui-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition-colors">ゲームに参加</button>
             </div>
             <div id="join-game-ui" class="hidden">
                 <input type="text" id="game-code-input" placeholder="招待コードを入力" class="w-full bg-gray-700 text-white p-3 rounded mb-4 text-center tracking-widest font-roberto-mono">
-                <button onclick="joinGame()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mb-2 transition-colors">参加</button>
-                <button onclick="showInitialUI()" class="w-full text-gray-400 hover:text-white py-2">戻る</button>
+                <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mb-2 transition-colors">参加</button>
+                <button id="back-to-initial-btn" class="w-full text-gray-400 hover:text-white py-2">戻る</button>
             </div>
             <div id="lobby-wait-ui" class="hidden">
                 <h3 class="text-xl mb-4">ロビー</h3>
                 <p class="mb-2">招待コード:</p>
-                <div class="bg-gray-800 p-3 rounded mb-4">
-                    <span id="game-code-display" class="text-2xl font-bold text-yellow-400 tracking-widest font-roberto-mono"></span>
+                <div class="bg-gray-800 p-3 rounded mb-4 flex items-center justify-center">
+                    <span id="game-code-display" class="text-2xl font-bold text-yellow-400 tracking-widest font-roberto-mono mr-4"></span>
+                    <button id="copy-code-btn" class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold py-1 px-2 rounded">コピー</button>
                 </div>
                 <div class="mb-4">
                     <label for="scenario-select" class="block mb-2">シナリオ選択:</label>
@@ -54,8 +67,8 @@
                     </select>
                 </div>
                 <h4 class="text-lg mb-2">参加プレイヤー:</h4>
-                <ul id="player-list" class="mb-4 text-left"></ul>
-                <button id="start-game-btn" onclick="startGame()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:bg-gray-600" disabled>ゲーム開始 (2人以上で開始可能)</button>
+                <ul id="player-list" class="mb-4 text-left space-y-2"></ul>
+                <button id="start-game-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:bg-gray-600" disabled>ゲーム開始</button>
             </div>
             <p id="lobby-error" class="text-red-400 mt-4"></p>
         </div>
@@ -72,7 +85,7 @@
                 </div>
                 <div id="unit-info" class="p-3 bg-gray-800 rounded-md h-40 overflow-y-auto hidden"></div>
                 <div id="action-buttons" class="space-y-2">
-                    <button id="end-phase-btn" onclick="endPhase()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors">フェーズ終了</button>
+                    <button id="end-phase-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors">フェーズ終了</button>
                 </div>
                 <div id="game-log" class="p-3 bg-gray-800 rounded-md h-64 overflow-y-auto text-sm">
                     <h4 class="font-bold mb-2">ゲームログ</h4>
@@ -95,7 +108,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- グローバル変数と定数 ---
         const BOARD_COLS = 20;
@@ -105,20 +118,26 @@
         let firebaseApp, auth, db;
         let localGameState = {};
         let localPlayerId = null;
-        let gameUnsubscribe = null; // onSnapshotのリスナー解除用
+        let gameUnsubscribe = null;
         let selectedHandCardId = null;
         let selectedUnitId = null;
-        let plannedActions = [];
 
         const ui = {
-            // UI要素の取得
+            titleScreen: document.getElementById('title-screen-modal'),
+            authLoadingText: document.getElementById('auth-loading-text'),
+            startAuthBtn: document.getElementById('start-auth-btn'),
             lobby: {
                 modal: document.getElementById('lobby-modal'),
                 initial: document.getElementById('initial-options'),
+                createGameBtn: document.getElementById('create-game-btn'),
+                showJoinUiBtn: document.getElementById('show-join-ui-btn'),
                 joinUI: document.getElementById('join-game-ui'),
+                joinGameBtn: document.getElementById('join-game-btn'),
+                backToInitialBtn: document.getElementById('back-to-initial-btn'),
                 waitUI: document.getElementById('lobby-wait-ui'),
                 codeInput: document.getElementById('game-code-input'),
                 codeDisplay: document.getElementById('game-code-display'),
+                copyCodeBtn: document.getElementById('copy-code-btn'),
                 playerList: document.getElementById('player-list'),
                 startGameBtn: document.getElementById('start-game-btn'),
                 scenarioSelect: document.getElementById('scenario-select'),
@@ -137,7 +156,6 @@
             }
         };
         
-        // --- データ ---
         const allCards = {
             'RX-78-2': { id: 'RX-78-2', name: "RX-78-2 ガンダム", side: 'federation', hp: 55, en: 40, move: 6, weapons: [{name: 'Beam Rifle', range: 5, damage: 20, cost: 5}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gundam.png'},
             'RGM-79': { id: 'RGM-79', name: "RGM-79 ジム", side: 'federation', hp: 30, en: 25, move: 5, weapons: [{name: 'Beam Spray Gun', range: 3, damage: 12, cost: 3}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gm.png'},
@@ -150,73 +168,114 @@
         };
 
         // --- Firebase初期化と認証 ---
-        async function initializeFirebase() {
-            // 本番環境では実際のconfigを使用
+        async function handleGameStart() {
+            ui.authLoadingText.classList.remove('hidden');
+            ui.startAuthBtn.disabled = true;
+            
             const firebaseConfig = {
-                  apiKey: "AIzaSyBEp2wuVwup6lyrUYVxim4EuQLrrKgBFTk",
-                  authDomain: "gumdamhexbattle.firebaseapp.com",
-                  projectId: "gumdamhexbattle",
-                  storageBucket: "gumdamhexbattle.firebasestorage.app",
-                  messagingSenderId: "828995733517",
-                  appId: "1:828995733517:web:29d2ff0781257a2df5ad44"
+                apiKey: "AIzaSyBEp2wuVwup6lyrUYVxim4EuQLrrKgBFTk",
+                authDomain: "gumdamhexbattle.firebaseapp.com",
+                projectId: "gumdamhexbattle",
+                storageBucket: "gumdamhexbattle.appspot.com",
+                messagingSenderId: "828995733517",
+                appId: "1:828995733517:web:29d2ff0781257a2df5ad44"
             };
-            firebaseApp = initializeApp(firebaseConfig);
-            auth = getAuth(firebaseApp);
-            db = getFirestore(firebaseApp);
 
-            onAuthStateChanged(auth, user => {
-                if (user) {
-                    localPlayerId = user.uid;
-                    console.log("Authenticated with ID:", localPlayerId);
+            try {
+                if (!firebaseApp) {
+                    firebaseApp = initializeApp(firebaseConfig);
+                    auth = getAuth(firebaseApp);
+                    db = getFirestore(firebaseApp);
                 }
-            });
-            await signInAnonymously(auth).catch(err => console.error(err));
-        }
 
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        localPlayerId = user.uid;
+                        console.log("Authenticated with ID:", localPlayerId);
+                        ui.titleScreen.classList.add('hidden');
+                        ui.lobby.modal.classList.remove('hidden');
+                    }
+                });
+
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                } else {
+                    localPlayerId = auth.currentUser.uid;
+                    ui.titleScreen.classList.add('hidden');
+                    ui.lobby.modal.classList.remove('hidden');
+                }
+
+            } catch(error) {
+                console.error("Firebase Initialization/Auth Error:", error);
+                ui.authLoadingText.classList.add('text-red-500');
+                if (error.code === 'auth/configuration-not-found') {
+                    ui.authLoadingText.innerHTML = `Firebase設定エラー: 匿名認証が有効になっていません。<br>Firebaseコンソールで設定を確認してください。`;
+                    alert("Firebase設定エラー (auth/configuration-not-found):\n\nこのアプリでは「匿名認証」が必要です。Firebaseプロジェクトで有効にしてください。\n\n手順:\n1. Firebaseコンソール > Authentication > Sign-in method\n2. プロバイダリストから「匿名」を選択し、有効にして保存します。");
+                } else {
+                    ui.authLoadingText.textContent = `認証エラー: ${error.message}`;
+                    alert(`Firebaseの初期化または認証に失敗しました。コンソールのエラーメッセージを確認してください。\nError: ${error.message}`);
+                }
+                ui.startAuthBtn.disabled = false;
+            }
+        }
+        
         // --- UI表示切り替え ---
-        window.showJoinUI = () => { ui.lobby.initial.classList.add('hidden'); ui.lobby.joinUI.classList.remove('hidden'); };
-        window.showInitialUI = () => { ui.lobby.joinUI.classList.add('hidden'); ui.lobby.initial.classList.remove('hidden'); };
+        function showJoinUI() { ui.lobby.initial.classList.add('hidden'); ui.lobby.joinUI.classList.remove('hidden'); };
+        function showInitialUI() { ui.lobby.joinUI.classList.add('hidden'); ui.lobby.initial.classList.remove('hidden'); };
         
         // --- ゲーム作成と参加 ---
-        window.createGame = async () => {
-            if (!localPlayerId) return alert("認証情報がありません。");
-            const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
-            
-            const hostPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: true };
-            const initialGameState = {
-                gameId: gameId,
-                status: 'lobby', // lobby, deckbuilding, placement, playing, finished
-                players: { [localPlayerId]: hostPlayer },
-                scenario: 'side7',
-                log: [`ゲーム[${gameId}]が作成されました。`],
-                createdAt: serverTimestamp()
-            };
+        async function createGame() {
+            if (!localPlayerId) { alert("認証が完了していません。"); return; }
+            ui.lobby.createGameBtn.disabled = true;
 
-            const gameRef = doc(db, 'games', gameId);
-            await setDoc(gameRef, initialGameState);
-            await attachToGame(gameId);
+            try {
+                const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
+                const hostPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: true };
+                const initialGameState = {
+                    gameId: gameId,
+                    status: 'lobby',
+                    players: { [localPlayerId]: hostPlayer },
+                    scenario: 'side7',
+                    log: [`ゲーム[${gameId}]が作成されました。`],
+                    createdAt: serverTimestamp()
+                };
+
+                const gameRef = doc(db, 'games', gameId);
+                await setDoc(gameRef, initialGameState);
+                await attachToGame(gameId);
+            } catch (error) {
+                console.error("Error creating game:", error);
+                if (error.code === 'permission-denied') {
+                    ui.lobby.error.textContent = "データベースへの書き込み権限がありません。Firestoreのセキュリティルールを確認してください。";
+                    alert("Firestoreセキュリティルールエラー:\n\nデータベースへの書き込みが拒否されました。これは通常、セキュリティルールが設定されていないか、正しくないことが原因です。\n\n次の手順でルールを更新してください:\n1. FirebaseコンソールでFirestore Databaseを開く\n2. 「ルール」タブを選択\n3. 以下のルールを貼り付けて公開する:\n\nrules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /games/{gameId} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}");
+                } else {
+                    ui.lobby.error.textContent = "ゲームの作成に失敗しました。コンソールを確認してください。";
+                }
+                ui.lobby.createGameBtn.disabled = false;
+            }
         };
         
-        window.joinGame = async () => {
+        async function joinGame() {
             const gameId = ui.lobby.codeInput.value.toUpperCase();
-            if (!gameId) return ui.lobby.error.textContent = "招待コードを入力してください。";
-            if (!localPlayerId) return alert("認証情報がありません。");
+            if (!gameId) { ui.lobby.error.textContent = "招待コードを入力してください。"; return; }
+            if (!localPlayerId) { alert("認証が完了していません。"); return; }
 
             const gameRef = doc(db, 'games', gameId);
-            const gameSnap = await getDoc(gameRef);
+            try {
+                const gameSnap = await getDoc(gameRef);
 
-            if (gameSnap.exists()) {
-                const gameData = gameSnap.data();
-                if (Object.keys(gameData.players).length >= 4) {
-                    return ui.lobby.error.textContent = "このゲームは満員です。";
+                if (gameSnap.exists()) {
+                    const gameData = gameSnap.data();
+                    if (Object.keys(gameData.players).length >= 4) { ui.lobby.error.textContent = "このゲームは満員です。"; return; }
+                    const newPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: false };
+                    await updateDoc(gameRef, { [`players.${localPlayerId}`]: newPlayer });
+                    await attachToGame(gameId);
+                } else {
+                    ui.lobby.error.textContent = "ゲームが見つかりません。";
                 }
-                const newPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: false };
-                await updateDoc(gameRef, {
-                    [`players.${localPlayerId}`]: newPlayer
-                });
-                await attachToGame(gameId);
-            } else {
-                ui.lobby.error.textContent = "ゲームが見つかりません。";
+            } catch (error) {
+                 console.error("Error joining game:", error);
+                 ui.lobby.error.textContent = "ゲームへの参加に失敗しました。";
             }
         };
 
@@ -241,7 +300,7 @@
                     }
                 } else {
                     alert("ゲームが終了または削除されました。");
-                    gameUnsubscribe();
+                    if(gameUnsubscribe) gameUnsubscribe();
                     location.reload();
                 }
             });
@@ -249,7 +308,15 @@
         
         function renderLobby(gameData) {
             const players = Object.values(gameData.players);
-            ui.lobby.playerList.innerHTML = players.map(p => `<li>${p.name} ${p.isHost ? '(ホスト)' : ''}</li>`).join('');
+            ui.lobby.playerList.innerHTML = players.map(p => {
+                if(p.id === localPlayerId) {
+                    return `<li class="flex items-center">
+                                <input type="text" data-player-id="${p.id}" value="${p.name}" class="player-name-input bg-gray-700 text-white p-1 rounded w-full">
+                                <span class="ml-2 text-yellow-400">(あなた)</span>
+                            </li>`;
+                }
+                return `<li class="p-1">${p.name} ${p.isHost ? '(ホスト)' : ''}</li>`;
+            }).join('');
             
             const isHost = gameData.players[localPlayerId]?.isHost;
             ui.lobby.scenarioSelect.disabled = !isHost;
@@ -263,43 +330,61 @@
                  ui.lobby.scenarioSelect.value = gameData.scenario;
             }
         }
+
+        async function updatePlayerName(playerId, newName) {
+            if (!localGameState.gameId || !playerId) return;
+            const gameRef = doc(db, 'games', localGameState.gameId);
+            await updateDoc(gameRef, {
+                [`players.${playerId}.name`]: newName
+            });
+        }
+
+        function copyGameCode() {
+            const code = ui.lobby.codeDisplay.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                ui.lobby.copyCodeBtn.textContent = 'コピー完了!';
+                setTimeout(() => { ui.lobby.copyCodeBtn.textContent = 'コピー'; }, 2000);
+            }).catch(err => console.error('コピーに失敗しました', err));
+        }
         
         // --- ゲーム開始処理 ---
-        window.startGame = async () => {
-            const gameId = localGameState.gameId;
-            const gameRef = doc(db, 'games', gameId);
-            const players = Object.values(localGameState.players);
+        async function startGame() {
+            if (!localGameState || !localGameState.gameId) return;
+            const gameRef = doc(db, 'games', localGameState.gameId);
+            let playersData = localGameState.players;
+            const playerIds = Object.keys(playersData);
             
-            // 陣営分け
-            let shuffledPlayers = players.sort(() => 0.5 - Math.random());
-            let fedCount = Math.ceil(players.length / 2);
-            shuffledPlayers.forEach((p, i) => {
-                localGameState.players[p.id].side = i < fedCount ? 'federation' : 'zeon';
+            let shuffledPlayerIds = playerIds.sort(() => 0.5 - Math.random());
+            let fedCount = Math.ceil(playerIds.length / 2);
+            
+            shuffledPlayerIds.forEach((id, i) => {
+                playersData[id].side = i < fedCount ? 'federation' : 'zeon';
             });
 
-            // デッキ構築
-            dealCards(localGameState);
+            dealCards(playersData);
             
-            // ゲーム状態の更新
-            localGameState.status = 'placement';
-            localGameState.phase = 'PLACEMENT';
-            localGameState.turn = 1;
-            localGameState.currentPlayer = 'federation';
-            localGameState.board = createBoard();
-            localGameState.units = []; // ユニットは配置時に追加
-            localGameState.log.push("ゲーム開始！ユニット配置フェーズです。");
+            const newState = {
+                ...localGameState,
+                players: playersData,
+                status: 'placement',
+                phase: 'PLACEMENT',
+                turn: 1,
+                currentPlayerSide: 'federation',
+                board: createBoard(),
+                units: [],
+                log: [...localGameState.log, "ゲーム開始！ユニット配置フェーズです。"],
+            };
             
-            await updateDoc(gameRef, localGameState);
+            await setDoc(gameRef, newState);
         };
         
-        function dealCards(gs) {
+        function dealCards(playersData) {
             const fedDeck = Object.values(allCards).filter(c => c.side === 'federation');
             const zeonDeck = Object.values(allCards).filter(c => c.side === 'zeon');
             
-            Object.values(gs.players).forEach(player => {
-                const deck = player.side === 'federation' ? [...fedDeck] : [...zeonDeck];
-                // 簡単化のため、全カードを手札とする
-                player.hand = deck.map(c => ({...c, handId: `${c.id}-${Math.random()}`}));
+            Object.values(playersData).forEach(player => {
+                const deckSource = player.side === 'federation' ? fedDeck : zeonDeck;
+                player.hand = deckSource.map(c => ({...c, handId: `${c.id}-${Math.random().toString(36).substr(2, 5)}`}));
             });
         }
         
@@ -315,7 +400,7 @@
 
         // --- ゲームレンダリング ---
         function renderGame(gs) {
-            localGameState = gs; // ローカル状態を同期
+            localGameState = gs;
             renderBoard();
             renderAllUnits();
             renderPlayerInfo();
@@ -325,24 +410,22 @@
         }
 
         function renderBoard() {
-            if (ui.game.board.children.length === 0) {
-                 for (let r = 0; r < BOARD_ROWS; r++) {
-                    for (let c = 0; c < BOARD_COLS; c++) {
-                        const hex = document.createElement('div');
-                        hex.classList.add('hex');
-                        hex.dataset.x = c;
-                        hex.dataset.y = r;
-                        hex.addEventListener('click', () => onHexClick(c, r));
-                        ui.game.board.appendChild(hex);
-                    }
+            if (ui.game.board.children.length > 0) return;
+            ui.game.board.innerHTML = ''; // Clear board before rendering
+            for (let r = 0; r < BOARD_ROWS; r++) {
+                for (let c = 0; c < BOARD_COLS; c++) {
+                    const hex = document.createElement('div');
+                    hex.classList.add('hex');
+                    hex.dataset.x = c;
+                    hex.dataset.y = r;
+                    hex.addEventListener('click', () => onHexClick(c, r));
+                    ui.game.board.appendChild(hex);
                 }
             }
         }
         
         function renderAllUnits() {
-            // 既存のユニットをクリア
             document.querySelectorAll('.unit').forEach(u => u.remove());
-            // 状態に基づいて再描画
             localGameState.units?.forEach(unit => {
                 const hex = document.querySelector(`.hex[data-x='${unit.x}'][data-y='${unit.y}']`);
                 if (hex) {
@@ -352,87 +435,99 @@
                     if (unit.hasActed) unitEl.classList.add('acted');
                     if (unit.id === selectedUnitId) unitEl.classList.add('selected');
                     unitEl.style.backgroundImage = `url(${unit.img || placeholderImg})`;
-                    unitEl.onclick = (e) => { e.stopPropagation(); onUnitClick(unit.id); };
+                    unitEl.addEventListener('click', (e) => { e.stopPropagation(); onUnitClick(unit.id); });
                     hex.appendChild(unitEl);
                 }
             });
         }
 
         function renderPlayerInfo() {
-            const player = localGameState.players[localPlayerId];
+            const player = localGameState.players?.[localPlayerId];
             if (!player) return;
             const sideColor = player.side === 'federation' ? 'text-blue-400' : 'text-green-400';
             ui.game.playerInfo.innerHTML = `<h3 class="font-bold text-lg text-center ${sideColor}">${player.name} (${player.side === 'federation' ? '地球連邦軍' : 'ジオン公国軍'})</h3>`;
         }
         
         function renderHand() {
-            const player = localGameState.players[localPlayerId];
-            if (!player) return;
+            const player = localGameState.players?.[localPlayerId];
+            if (!player?.hand) {
+                 ui.game.handArea.innerHTML = '';
+                 return;
+            }
             ui.game.handArea.innerHTML = player.hand.map(card => `
-                <div id="${card.handId}" class="hand-card bg-gray-800 p-2 rounded w-32 flex-shrink-0 ${selectedHandCardId === card.handId ? 'selected' : ''}" onclick="onHandCardClick('${card.handId}')">
+                <div data-hand-id="${card.handId}" class="hand-card bg-gray-800 p-2 rounded w-32 flex-shrink-0 ${selectedHandCardId === card.handId ? 'selected' : ''}">
                     <img src="${card.img}" class="w-full h-16 object-cover rounded-sm mb-2" onerror="this.onerror=null;this.src='${placeholderImg}';">
                     <p class="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis">${card.name}</p>
                 </div>
             `).join('');
+            
+            document.querySelectorAll('.hand-card').forEach(cardEl => {
+                cardEl.addEventListener('click', () => onHandCardClick(cardEl.dataset.handId));
+            });
         }
         
         function updateGameInfo() {
-            ui.game.turnIndicator.textContent = `TURN ${localGameState.turn}`;
+            if(!localGameState || !localGameState.players) return;
+            ui.game.turnIndicator.textContent = `TURN ${localGameState.turn || 1}`;
             const phaseMap = { PLACEMENT: '配置フェーズ', STRATEGY: '戦略フェーズ', EXECUTION: '実行フェーズ', COMBAT: '戦闘フェーズ' };
-            ui.game.phaseIndicator.textContent = phaseMap[localGameState.phase] || '';
+            ui.game.phaseIndicator.textContent = phaseMap[localGameState.phase] || '待機中';
 
-            const isMyTurn = localGameState.currentPlayer === localGameState.players[localPlayerId]?.side;
+            const player = localGameState.players?.[localPlayerId];
+            const isMyTurn = localGameState.currentPlayerSide === player?.side;
             ui.game.endPhaseBtn.disabled = !isMyTurn;
             ui.game.endPhaseBtn.textContent = isMyTurn ? "フェーズ終了" : "相手ターン";
         }
         
         function updateLog() {
-            ui.game.logMessages.innerHTML = localGameState.log?.slice(0, 20).map(msg => `<div>${msg}</div>`).join('') || '';
+            if(!ui.game.logMessages || !localGameState.log) return;
+            ui.game.logMessages.innerHTML = localGameState.log.slice(-20).map(msg => `<div>${msg}</div>`).join('');
             ui.game.logMessages.scrollTop = ui.game.logMessages.scrollHeight;
         }
 
         // --- ゲーム内アクション ---
         function onHandCardClick(handId) {
-            if (localGameState.phase !== 'PLACEMENT' || localGameState.currentPlayer !== localGameState.players[localPlayerId].side) return;
+            const player = localGameState.players?.[localPlayerId];
+            if (!player || localGameState.phase !== 'PLACEMENT' || localGameState.currentPlayerSide !== player.side) return;
             
             selectedHandCardId = handId;
             selectedUnitId = null;
-            renderHand(); // 選択状態を更新
+            renderHand();
             
             const scenario = scenarios[localGameState.scenario];
-            const zone = localGameState.players[localPlayerId].side === 'federation' ? scenario.federationStartZone : scenario.zeonStartZone;
+            const zone = player.side === 'federation' ? scenario.federationStartZone : scenario.zeonStartZone;
             highlightPlacementZone(zone);
         }
         
         function onUnitClick(unitId) {
-             if (localGameState.phase !== 'STRATEGY' || localGameState.currentPlayer !== localGameState.players[localPlayerId].side) return;
+             const player = localGameState.players?.[localPlayerId];
+             if (!player || localGameState.phase !== 'STRATEGY' || localGameState.currentPlayerSide !== player.side) return;
              const unit = localGameState.units.find(u => u.id === unitId);
-             if(unit.side !== localGameState.players[localPlayerId].side || unit.hasActed) return;
+             if(!unit || unit.owner !== localPlayerId || unit.hasActed) return;
              
              selectedUnitId = unitId;
              selectedHandCardId = null;
              renderAllUnits();
-             // TODO: Highlight move/attack range
         }
         
         async function onHexClick(x, y) {
+            const player = localGameState.players?.[localPlayerId];
+            if (!player) return;
+
             if (localGameState.phase === 'PLACEMENT' && selectedHandCardId) {
-                const player = localGameState.players[localPlayerId];
                 const cardInHand = player.hand.find(c => c.handId === selectedHandCardId);
-                
-                // 配置処理
+                if(!cardInHand) return;
+
                 const newUnit = {
                     ...cardInHand,
                     id: `${cardInHand.id}-${Math.random().toString(36).substr(2, 5)}`,
                     currentHp: cardInHand.hp,
-                    x, y,
+                    x: parseInt(x), y: parseInt(y),
                     owner: localPlayerId,
                     side: player.side,
                     hasActed: false
                 };
                 
                 const newHand = player.hand.filter(c => c.handId !== selectedHandCardId);
-                
                 const updatedUnits = [...(localGameState.units || []), newUnit];
                 
                 const gameRef = doc(db, 'games', localGameState.gameId);
@@ -444,26 +539,45 @@
                 
                 selectedHandCardId = null;
                 clearHighlights();
-            } else if (localGameState.phase === 'STRATEGY' && selectedUnitId) {
-                // 移動/攻撃計画処理 (TODO)
             }
         }
         
         async function endPhase() {
+            if(!localGameState.gameId) return;
             const gameRef = doc(db, 'games', localGameState.gameId);
-            let newPhase = localGameState.phase;
-            let newCurrentPlayer = localGameState.currentPlayer;
-            let newTurn = localGameState.turn;
+            let updates = {};
             let newLog = [...localGameState.log];
-            
+            const mySide = localGameState.players[localPlayerId].side;
+
             if (localGameState.phase === 'PLACEMENT') {
-                // 全員が配置完了したかチェック (簡略化: ボタンで進める)
-                newPhase = 'STRATEGY';
-                newLog.push("全ユニット配置完了。戦略フェーズ開始！");
-                
-                await updateDoc(gameRef, { phase: newPhase, log: newLog });
+                const teamPlayers = Object.values(localGameState.players).filter(p => p.side === mySide);
+                const allTeamPlaced = teamPlayers.every(p => p.hand.length === 0);
+
+                if (allTeamPlaced) {
+                    newLog.push(`${mySide}チームが配置を完了しました。`);
+                    
+                    const nextSide = mySide === 'federation' ? 'zeon' : 'federation';
+                    const nextTeamPlayers = Object.values(localGameState.players).filter(p => p.side === nextSide);
+                    const isNextTeamPlaced = nextTeamPlayers.every(p => p.hand.length === 0);
+
+                    if(isNextTeamPlaced) {
+                        updates.phase = 'STRATEGY';
+                        updates.currentPlayerSide = 'federation';
+                        newLog.push("全ユニット配置完了。戦略フェーズ開始！");
+                    } else {
+                        updates.currentPlayerSide = nextSide;
+                        newLog.push(`${updates.currentPlayerSide === 'federation' ? '地球連邦軍' : 'ジオン公国軍'}の配置フェーズです。`);
+                    }
+                } else {
+                    alert("まだ配置できるユニットがあります。");
+                    return;
+                }
+            } else if (localGameState.phase === 'STRATEGY') {
+                // 戦略フェーズから実行フェーズへの移行ロジック (TODO)
             }
-            // 他のフェーズ遷移ロジックをここに追加
+            
+            updates.log = newLog;
+            await updateDoc(gameRef, updates);
         }
         
         function highlightPlacementZone(zone) {
@@ -483,8 +597,23 @@
             });
         }
         
-        // --- 初期化 ---
-        window.onload = initializeFirebase;
+        // --- イベントリスナーの登録 ---
+        ui.startAuthBtn.addEventListener('click', handleGameStart);
+        ui.lobby.createGameBtn.addEventListener('click', createGame);
+        ui.lobby.showJoinUiBtn.addEventListener('click', showJoinUI);
+        ui.lobby.joinGameBtn.addEventListener('click', joinGame);
+        ui.lobby.backToInitialBtn.addEventListener('click', showInitialUI);
+        ui.lobby.startGameBtn.addEventListener('click', startGame);
+        ui.lobby.copyCodeBtn.addEventListener('click', copyGameCode);
+        ui.game.endPhaseBtn.addEventListener('click', endPhase);
+        
+        // プレイヤー名変更イベントリスナーを委譲
+        ui.lobby.playerList.addEventListener('change', (event) => {
+            const target = event.target;
+            if (target.tagName === 'INPUT' && target.classList.contains('player-name-input')) {
+                updatePlayerName(target.dataset.playerId, target.value);
+            }
+        });
 
     </script>
 </body>
