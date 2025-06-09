@@ -3,75 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>機動戦士ガンダム 一年戦争オンラインボードゲーム</title>
+    <title>機動戦士ガンダム 一年戦争～HEX BATTLE～</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; background-color: #111827; color: #e5e7eb; }
         .font-roberto-mono { font-family: 'Roboto Mono', monospace; }
-        #game-board { display: grid; grid-template-columns: repeat(20, 50px); gap: 4px; }
+        #game-board { display: grid; grid-template-columns: repeat(20, 50px); gap: 4px; transform: scale(0.9); transform-origin: top left; }
         .hex { position: relative; width: 50px; height: 57.74px; background-color: #374151; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); transition: background-color 0.2s; }
         .hex:hover { background-color: #4b5563; }
         .hex.highlight-move { background-color: #60a5fa; opacity: 0.7; cursor: pointer; }
         .hex.highlight-attack { background-color: #f87171; opacity: 0.7; cursor: pointer; }
         .hex.highlight-place { background-color: #a7f3d0; opacity: 0.7; cursor: pointer; }
-        .unit { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 45px; height: 45px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid white; cursor: pointer; transition: all 0.3s ease; }
+        .unit { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 45px; height: 45px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid white; cursor: pointer; transition: all 0.3s ease; z-index: 10; }
         .unit.federation { border-color: #60a5fa; }
         .unit.zeon { border-color: #4ade80; }
-        .unit.selected { border-color: #facc15; transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 15px #facc15; }
+        .unit.selected { border-color: #facc15; transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 15px #facc15; z-index: 20; }
         .unit.acted { filter: grayscale(80%); }
-        .hand-card { cursor: pointer; transition: all 0.2s ease; }
+        .hand-card { cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; }
         .hand-card:hover { transform: translateY(-5px) scale(1.05); }
-        .hand-card.selected { border: 2px solid #facc15; box-shadow: 0 0 10px #facc15; }
+        .hand-card.selected { border-color: #facc15; box-shadow: 0 0 10px #facc15; }
         .modal { backdrop-filter: blur(5px); }
     </style>
 </head>
-<body class="p-2 md:p-4">
+<body class="p-1 md:p-2">
 
-    <!-- Title Screen Modal -->
-    <div id="title-screen-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-        <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
-            <h1 class="text-4xl font-bold mb-2 font-roberto-mono text-yellow-300">一年戦争</h1>
-            <h2 class="text-xl font-bold mb-8 font-roberto-mono">HEX BATTLE</h2>
-            <button id="start-auth-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors">ゲームスタート</button>
-            <p id="auth-loading-text" class="text-sm text-gray-400 mt-4 hidden">認証中...</p>
+    <!-- Modal Container -->
+    <div id="modal-container">
+        <!-- Title Screen Modal -->
+        <div id="title-screen-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+                <h1 class="text-4xl font-bold mb-2 font-roberto-mono text-yellow-300">一年戦争</h1>
+                <h2 class="text-xl font-bold mb-8 font-roberto-mono">HEX BATTLE</h2>
+                <button id="start-auth-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors">ゲームスタート</button>
+                <p id="auth-loading-text" class="text-sm text-gray-400 mt-4 hidden">認証中...</p>
+            </div>
         </div>
-    </div>
 
-
-    <!-- Lobby Modal -->
-    <div id="lobby-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
-        <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
-            <h2 class="text-3xl font-bold mb-6 font-roberto-mono">オンラインロビー</h2>
-            <div id="initial-options">
-                <button id="create-game-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded mb-4 transition-colors">ゲームを作成</button>
-                <button id="show-join-ui-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition-colors">ゲームに参加</button>
-            </div>
-            <div id="join-game-ui" class="hidden">
-                <input type="text" id="game-code-input" placeholder="招待コードを入力" class="w-full bg-gray-700 text-white p-3 rounded mb-4 text-center tracking-widest font-roberto-mono">
-                <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mb-2 transition-colors">参加</button>
-                <button id="back-to-initial-btn" class="w-full text-gray-400 hover:text-white py-2">戻る</button>
-            </div>
-            <div id="lobby-wait-ui" class="hidden">
-                <h3 class="text-xl mb-4">ロビー</h3>
-                <p class="mb-2">招待コード:</p>
-                <div class="bg-gray-800 p-3 rounded mb-4 flex items-center justify-center">
-                    <span id="game-code-display" class="text-2xl font-bold text-yellow-400 tracking-widest font-roberto-mono mr-4"></span>
-                    <button id="copy-code-btn" class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold py-1 px-2 rounded">コピー</button>
+        <!-- Lobby Modal -->
+        <div id="lobby-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+            <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+                <h2 class="text-3xl font-bold mb-6 font-roberto-mono">オンラインロビー</h2>
+                <div id="initial-options">
+                    <button id="create-game-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded mb-4 transition-colors">ゲームを作成</button>
+                    <button id="show-join-ui-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition-colors">ゲームに参加</button>
                 </div>
-                <div class="mb-4">
-                    <label for="scenario-select" class="block mb-2">シナリオ選択:</label>
-                    <select id="scenario-select" class="w-full bg-gray-700 text-white p-2 rounded">
-                        <option value="side7">サイド7強襲</option>
-                        <option value="odessa">オデッサ作戦</option>
-                    </select>
+                <div id="join-game-ui" class="hidden">
+                    <input type="text" id="game-code-input" placeholder="招待コードを入力" class="w-full bg-gray-700 text-white p-3 rounded mb-4 text-center tracking-widest font-roberto-mono">
+                    <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mb-2 transition-colors">参加</button>
+                    <button id="back-to-initial-btn" class="w-full text-gray-400 hover:text-white py-2">戻る</button>
                 </div>
-                <h4 class="text-lg mb-2">参加プレイヤー:</h4>
-                <ul id="player-list" class="mb-4 text-left space-y-2"></ul>
-                <button id="start-game-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:bg-gray-600" disabled>ゲーム開始</button>
+                <div id="lobby-wait-ui" class="hidden">
+                    <h3 class="text-xl mb-4">ロビー</h3>
+                    <p class="mb-2">招待コード:</p>
+                    <div class="bg-gray-800 p-3 rounded mb-4 flex items-center justify-center">
+                        <span id="game-code-display" class="text-2xl font-bold text-yellow-400 tracking-widest font-roberto-mono mr-4"></span>
+                        <button id="copy-code-btn" class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold py-1 px-2 rounded">コピー</button>
+                    </div>
+                    <div class="mb-4">
+                        <label for="scenario-select" class="block mb-2">シナリオ選択:</label>
+                        <select id="scenario-select" class="w-full bg-gray-700 text-white p-2 rounded">
+                            <option value="side7">サイド7強襲</option>
+                            <option value="odessa">オデッサ作戦</option>
+                        </select>
+                    </div>
+                    <h4 class="text-lg mb-2">参加プレイヤー:</h4>
+                    <ul id="player-list" class="mb-4 text-left space-y-2"></ul>
+                    <button id="start-game-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:bg-gray-600" disabled>ゲーム開始</button>
+                </div>
+                <p id="lobby-error" class="text-red-400 mt-4"></p>
             </div>
-            <p id="lobby-error" class="text-red-400 mt-4"></p>
         </div>
+
+        <!-- Side Selection Modal -->
+        <div id="side-selection-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+            <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-lg w-full">
+                <h2 class="text-3xl font-bold mb-6 font-roberto-mono">陣営決定</h2>
+                <div id="dice-roll-area" class="space-y-4"></div>
+                <div id="side-choice-area" class="hidden mt-4 space-x-4">
+                    <button id="choose-fed-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">地球連邦軍を選択</button>
+                    <button id="choose-zeon-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">ジオン公国軍を選択</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mission Modal -->
+        <div id="mission-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+             <div class="bg-gray-900 p-8 rounded-lg shadow-2xl max-w-2xl w-full">
+                <h2 class="text-3xl font-bold mb-6 font-roberto-mono text-center">作戦目標</h2>
+                <div id="mission-content" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                <div class="text-center mt-6">
+                    <button id="mission-confirm-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded">確認</button>
+                </div>
+            </div>
+        </div>
+        
     </div>
     
     <div id="game-container" class="hidden">
@@ -83,7 +109,7 @@
                     <h2 id="turn-indicator" class="text-2xl font-bold font-roberto-mono text-center">TURN 1</h2>
                     <div id="phase-indicator" class="text-lg text-amber-400 font-roberto-mono text-center mt-1"></div>
                 </div>
-                <div id="unit-info" class="p-3 bg-gray-800 rounded-md h-40 overflow-y-auto hidden"></div>
+                <div id="unit-info" class="p-3 bg-gray-800 rounded-md h-60 overflow-y-auto hidden"></div>
                 <div id="action-buttons" class="space-y-2">
                     <button id="end-phase-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors">フェーズ終了</button>
                 </div>
@@ -93,13 +119,18 @@
                 </div>
             </div>
             <!-- Center Panel -->
-            <div class="col-span-12 lg:col-span-9 bg-gray-900 p-4 rounded-lg shadow-lg flex items-center justify-center">
-                <div id="game-board"></div>
+            <div class="col-span-12 lg:col-span-9 bg-gray-900 p-4 rounded-lg shadow-lg flex items-center justify-center overflow-hidden">
+                 <div id="game-board-container" class="w-full h-full overflow-auto">
+                    <div id="game-board"></div>
+                </div>
             </div>
         </div>
         <!-- Bottom Panel -->
-        <div class="max-w-screen-2xl mx-auto mt-4 bg-gray-900 p-4 rounded-lg shadow-lg">
-            <h3 id="hand-title" class="text-lg font-bold mb-2">あなたの手札</h3>
+        <div id="bottom-panel" class="max-w-screen-2xl mx-auto mt-4 bg-gray-900 p-4 rounded-lg shadow-lg">
+             <div class="flex justify-between items-center mb-2">
+                 <h3 id="hand-title" class="text-lg font-bold">あなたの手札</h3>
+                 <div id="deck-build-info" class="text-right"></div>
+             </div>
             <div id="player-hand-area" class="player-hand flex space-x-2 overflow-x-auto pb-4"></div>
         </div>
     </div>
@@ -121,6 +152,7 @@
         let gameUnsubscribe = null;
         let selectedHandCardId = null;
         let selectedUnitId = null;
+        let isMyTurn = false;
 
         const ui = {
             titleScreen: document.getElementById('title-screen-modal'),
@@ -143,6 +175,18 @@
                 scenarioSelect: document.getElementById('scenario-select'),
                 error: document.getElementById('lobby-error'),
             },
+            sideSelection: {
+                modal: document.getElementById('side-selection-modal'),
+                diceRollArea: document.getElementById('dice-roll-area'),
+                sideChoiceArea: document.getElementById('side-choice-area'),
+                chooseFedBtn: document.getElementById('choose-fed-btn'),
+                chooseZeonBtn: document.getElementById('choose-zeon-btn'),
+            },
+            mission: {
+                modal: document.getElementById('mission-modal'),
+                content: document.getElementById('mission-content'),
+                confirmBtn: document.getElementById('mission-confirm-btn'),
+            },
             game: {
                 container: document.getElementById('game-container'),
                 board: document.getElementById('game-board'),
@@ -153,18 +197,42 @@
                 endPhaseBtn: document.getElementById('end-phase-btn'),
                 logMessages: document.getElementById('log-messages'),
                 handArea: document.getElementById('player-hand-area'),
+                deckBuildInfo: document.getElementById('deck-build-info'),
+                bottomPanel: document.getElementById('bottom-panel'),
             }
         };
         
         const allCards = {
-            'RX-78-2': { id: 'RX-78-2', name: "RX-78-2 ガンダム", side: 'federation', hp: 55, en: 40, move: 6, weapons: [{name: 'Beam Rifle', range: 5, damage: 20, cost: 5}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gundam.png'},
-            'RGM-79': { id: 'RGM-79', name: "RGM-79 ジム", side: 'federation', hp: 30, en: 25, move: 5, weapons: [{name: 'Beam Spray Gun', range: 3, damage: 12, cost: 3}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gm.png'},
-            'MS-06F': { id: 'MS-06F', name: "MS-06F ザクII", side: 'zeon', hp: 28, en: 25, move: 5, weapons: [{name: 'Machine Gun', range: 4, damage: 10, cost: 2}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_zaku.png'},
-            'MS-06S': { id: 'MS-06S', name: "シャア専用ザクII", side: 'zeon', hp: 35, en: 30, move: 7, weapons: [{name: 'Machine Gun', range: 4, damage: 12, cost: 3}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_charzaku.png'},
+             warship: [
+                {id: 'WB', name: 'ホワイトベース', side: 'federation', hp: 200, move: 4, capacity: 6},
+                {id: 'Musai', name: 'ムサイ', side: 'zeon', hp: 150, move: 4, capacity: 4},
+             ],
+             ms: [
+                { id: 'RX-78-2', name: "RX-78-2 ガンダム", side: 'federation', cost: 3, hp: 55, en: 40, move: 6, weapons: [{name: 'Beam Rifle', range: 5, damage: 20}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gundam.png'},
+                { id: 'RGM-79', name: "RGM-79 ジム", side: 'federation', cost: 1, hp: 30, en: 25, move: 5, weapons: [{name: 'Beam Spray Gun', range: 3, damage: 12}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gm.png'},
+                { id: 'MS-06F', name: "MS-06F ザクII", side: 'zeon', cost: 1, hp: 28, en: 25, move: 5, weapons: [{name: 'Machine Gun', range: 4, damage: 10}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_zaku.png'},
+                { id: 'MS-06S', name: "シャア専用ザクII", side: 'zeon', cost: 2, hp: 35, en: 30, move: 7, weapons: [{name: 'Machine Gun', range: 4, damage: 12}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_charzaku.png'},
+             ],
+             pilot: [
+                {id: 'Amuro', name: 'アムロ・レイ', side: 'federation', skill: '命中&回避+1'},
+                {id: 'Char', name: 'シャア・アズナブル', side: 'zeon', skill: '移動+1'},
+             ]
         };
         const scenarios = {
-            side7: { name: 'サイド7強襲', federationStartZone: {x: 0, y: 0, w: 3, h: 12}, zeonStartZone: {x: 17, y: 0, w: 3, h: 12} },
-            odessa: { name: 'オデッサ作戦', federationStartZone: {x: 0, y: 0, w: 20, h: 2}, zeonStartZone: {x: 0, y: 10, w: 20, h: 2} }
+            side7: { 
+                name: 'サイド7強襲', 
+                federationStartZone: {x: 0, y: 0, w: 3, h: 12}, 
+                zeonStartZone: {x: 17, y: 0, w: 3, h: 12},
+                fedMission: 'V作戦のMS3機がマップ右端から脱出する。',
+                zeonMission: 'V作戦のMS3機を全て破壊する。'
+            },
+            odessa: { 
+                name: 'オデッサ作戦', 
+                federationStartZone: {x: 0, y: 0, w: 20, h: 2}, 
+                zeonStartZone: {x: 0, y: 10, w: 20, h: 2},
+                fedMission: 'マップ中央の司令部を10ターン以内に占領する。',
+                zeonMission: '10ターンの間、司令部を防衛する。'
+            }
         };
 
         // --- Firebase初期化と認証 ---
@@ -213,7 +281,6 @@
                     alert("Firebase設定エラー (auth/configuration-not-found):\n\nこのアプリでは「匿名認証」が必要です。Firebaseプロジェクトで有効にしてください。\n\n手順:\n1. Firebaseコンソール > Authentication > Sign-in method\n2. プロバイダリストから「匿名」を選択し、有効にして保存します。");
                 } else {
                     ui.authLoadingText.textContent = `認証エラー: ${error.message}`;
-                    alert(`Firebaseの初期化または認証に失敗しました。コンソールのエラーメッセージを確認してください。\nError: ${error.message}`);
                 }
                 ui.startAuthBtn.disabled = false;
             }
@@ -230,7 +297,7 @@
 
             try {
                 const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
-                const hostPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: true };
+                const hostPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: true, diceRoll: null, isReady: false };
                 const initialGameState = {
                     gameId: gameId,
                     status: 'lobby',
@@ -267,7 +334,7 @@
                 if (gameSnap.exists()) {
                     const gameData = gameSnap.data();
                     if (Object.keys(gameData.players).length >= 4) { ui.lobby.error.textContent = "このゲームは満員です。"; return; }
-                    const newPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: false };
+                    const newPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: false, diceRoll: null, isReady: false };
                     await updateDoc(gameRef, { [`players.${localPlayerId}`]: newPlayer });
                     await attachToGame(gameId);
                 } else {
@@ -291,12 +358,27 @@
                 if (docSnap.exists()) {
                     const gameData = docSnap.data();
                     localGameState = gameData;
-                    renderLobby(gameData);
                     
-                    if (gameData.status !== 'lobby') {
-                        ui.lobby.modal.classList.add('hidden');
-                        ui.game.container.classList.remove('hidden');
-                        renderGame(gameData);
+                    switch(gameData.status) {
+                        case 'lobby':
+                            renderLobby();
+                            break;
+                        case 'side_selection':
+                            ui.lobby.modal.classList.add('hidden');
+                            ui.sideSelection.modal.classList.remove('hidden');
+                            renderSideSelection();
+                            break;
+                        case 'mission_briefing':
+                            ui.sideSelection.modal.classList.add('hidden');
+                            ui.mission.modal.classList.remove('hidden');
+                            renderMissionBriefing();
+                            break;
+                        case 'deck_building':
+                            ui.mission.modal.classList.add('hidden');
+                            ui.game.container.classList.remove('hidden');
+                            renderGameUI();
+                            break;
+                        // 他のゲームフェーズのレンダリングをここに追加
                     }
                 } else {
                     alert("ゲームが終了または削除されました。");
@@ -306,8 +388,8 @@
             });
         }
         
-        function renderLobby(gameData) {
-            const players = Object.values(gameData.players);
+        function renderLobby() {
+            const players = Object.values(localGameState.players);
             ui.lobby.playerList.innerHTML = players.map(p => {
                 if(p.id === localPlayerId) {
                     return `<li class="flex items-center">
@@ -318,16 +400,16 @@
                 return `<li class="p-1">${p.name} ${p.isHost ? '(ホスト)' : ''}</li>`;
             }).join('');
             
-            const isHost = gameData.players[localPlayerId]?.isHost;
+            const isHost = localGameState.players[localPlayerId]?.isHost;
             ui.lobby.scenarioSelect.disabled = !isHost;
             ui.lobby.startGameBtn.disabled = players.length < 2 || !isHost;
 
             if (isHost) {
                 ui.lobby.scenarioSelect.onchange = () => {
-                    updateDoc(doc(db, 'games', gameData.gameId), { scenario: ui.lobby.scenarioSelect.value });
+                    updateDoc(doc(db, 'games', localGameState.gameId), { scenario: ui.lobby.scenarioSelect.value });
                 };
             } else {
-                 ui.lobby.scenarioSelect.value = gameData.scenario;
+                 ui.lobby.scenarioSelect.value = localGameState.scenario;
             }
         }
 
@@ -351,56 +433,127 @@
         async function startGame() {
             if (!localGameState || !localGameState.gameId) return;
             const gameRef = doc(db, 'games', localGameState.gameId);
-            let playersData = localGameState.players;
-            const playerIds = Object.keys(playersData);
-            
-            let shuffledPlayerIds = playerIds.sort(() => 0.5 - Math.random());
-            let fedCount = Math.ceil(playerIds.length / 2);
-            
-            shuffledPlayerIds.forEach((id, i) => {
-                playersData[id].side = i < fedCount ? 'federation' : 'zeon';
-            });
-
-            dealCards(playersData);
-            
-            const newState = {
-                ...localGameState,
-                players: playersData,
-                status: 'placement',
-                phase: 'PLACEMENT',
-                turn: 1,
-                currentPlayerSide: 'federation',
-                board: createBoard(),
-                units: [],
-                log: [...localGameState.log, "ゲーム開始！ユニット配置フェーズです。"],
-            };
-            
-            await setDoc(gameRef, newState);
+            await updateDoc(gameRef, { status: 'side_selection' });
         };
         
-        function dealCards(playersData) {
-            const fedDeck = Object.values(allCards).filter(c => c.side === 'federation');
-            const zeonDeck = Object.values(allCards).filter(c => c.side === 'zeon');
+        // --- 陣営決定フェーズ ---
+        function renderSideSelection() {
+            const players = Object.values(localGameState.players);
+            const me = localGameState.players[localPlayerId];
+            ui.sideSelection.diceRollArea.innerHTML = players.map(p => {
+                let rollButton = '';
+                if (p.id === localPlayerId && !p.diceRoll) {
+                    rollButton = `<button data-player-id="${p.id}" class="roll-dice-btn bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-1 px-3 rounded ml-4">ダイスを振る</button>`;
+                }
+                return `<div>${p.name}: <span class="text-2xl font-bold">${p.diceRoll || '?'}</span>${rollButton}</div>`;
+            }).join('');
             
-            Object.values(playersData).forEach(player => {
-                const deckSource = player.side === 'federation' ? fedDeck : zeonDeck;
-                player.hand = deckSource.map(c => ({...c, handId: `${c.id}-${Math.random().toString(36).substr(2, 5)}`}));
-            });
+            document.querySelectorAll('.roll-dice-btn').forEach(btn => btn.addEventListener('click', rollDice));
+            
+            const allRolled = players.every(p => p.diceRoll);
+            if(allRolled) {
+                const winner = players.reduce((a, b) => a.diceRoll > b.diceRoll ? a : b);
+                 if(winner.id === localPlayerId) {
+                     ui.sideSelection.sideChoiceArea.classList.remove('hidden');
+                 } else {
+                     ui.sideSelection.sideChoiceArea.classList.add('hidden');
+                     ui.sideSelection.diceRollArea.innerHTML += `<p class="mt-4 text-amber-400">${winner.name}が陣営を選択中です...</p>`;
+                 }
+            }
         }
         
-        function createBoard() {
-            let board = [];
-            for (let r = 0; r < BOARD_ROWS; r++) {
-                for (let c = 0; c < BOARD_COLS; c++) {
-                    board.push({ x: c, y: r, unitId: null, terrain: 'space' });
-                }
-            }
-            return board;
+        async function rollDice(event) {
+            const playerId = event.target.dataset.playerId;
+            const roll = Math.floor(Math.random() * 6) + 1;
+            const gameRef = doc(db, 'games', localGameState.gameId);
+            await updateDoc(gameRef, {
+                [`players.${playerId}.diceRoll`]: roll,
+            });
         }
 
-        // --- ゲームレンダリング ---
-        function renderGame(gs) {
-            localGameState = gs;
+        async function chooseSide(side) {
+            const gameRef = doc(db, 'games', localGameState.gameId);
+            const players = localGameState.players;
+            const winnerId = localPlayerId;
+            const otherPlayerIds = Object.keys(players).filter(id => id !== winnerId);
+            
+            const updates = {};
+            updates[`players.${winnerId}.side`] = side;
+            
+            let zeonCount = side === 'zeon' ? 1 : 0;
+            let fedCount = side === 'federation' ? 1 : 0;
+            let fedMax = Math.ceil(Object.keys(players).length / 2);
+            let zeonMax = Math.floor(Object.keys(players).length / 2);
+            
+            otherPlayerIds.forEach(id => {
+                if (fedCount < fedMax) {
+                    updates[`players.${id}.side`] = 'federation';
+                    fedCount++;
+                } else {
+                    updates[`players.${id}.side`] = 'zeon';
+                    zeonCount++;
+                }
+            });
+
+            updates.status = 'mission_briefing';
+            
+            await updateDoc(gameRef, updates);
+        }
+        
+        // --- ミッション説明フェーズ ---
+        function renderMissionBriefing() {
+            const scenario = scenarios[localGameState.scenario];
+            const me = localGameState.players[localPlayerId];
+            
+            ui.mission.content.innerHTML = `
+                <div class="bg-blue-900 bg-opacity-50 p-4 rounded">
+                    <h3 class="font-bold text-lg text-blue-300">地球連邦軍 作戦目標</h3>
+                    <p>${scenario.fedMission}</p>
+                </div>
+                 <div class="bg-green-900 bg-opacity-50 p-4 rounded">
+                    <h3 class="font-bold text-lg text-green-300">ジオン公国軍 作戦目標</h3>
+                    <p>${scenario.zeonMission}</p>
+                </div>
+            `;
+            ui.mission.confirmBtn.disabled = me.isReady;
+            if(me.isReady) ui.mission.confirmBtn.textContent = '相手の確認を待っています...';
+        }
+
+        async function confirmMission() {
+             const gameRef = doc(db, 'games', localGameState.gameId);
+             await updateDoc(gameRef, { [`players.${localPlayerId}.isReady`]: true });
+             
+             // この後、onSnapshotが自動で検知して次の処理を判断する
+        }
+        
+        // onSnapshot内でmission_briefingの完了を監視
+        function checkAllPlayersReadyForDeckBuilding() {
+            if (localGameState.status !== 'mission_briefing') return;
+            const allReady = Object.values(localGameState.players).every(p => p.isReady);
+            if (allReady) {
+                const gameRef = doc(db, 'games', localGameState.gameId);
+                const playersReset = localGameState.players;
+                Object.keys(playersReset).forEach(k => {
+                    playersReset[k].isReady = false; // 次のフェーズのためにリセット
+                    playersReset[k].diceRoll = null; // ダイス結果もリセット
+                });
+                
+                dealCards(playersReset);
+
+                updateDoc(gameRef, { 
+                    status: 'deck_building',
+                    players: playersReset,
+                    log: [...localGameState.log, "陣営決定完了。デッキ構築を開始します。"]
+                });
+            }
+        }
+        
+        // onSnapshotのコールバックに `checkAllPlayersReadyForDeckBuilding()` を追加する必要がある
+        // onSnapshot内、localGameState = gameData; の後
+        // if (gameData.status === 'mission_briefing') checkAllPlayersReadyForDeckBuilding();
+
+        // --- ゲームUIレンダリング ---
+        function renderGameUI() {
             renderBoard();
             renderAllUnits();
             renderPlayerInfo();
@@ -411,7 +564,7 @@
 
         function renderBoard() {
             if (ui.game.board.children.length > 0) return;
-            ui.game.board.innerHTML = ''; // Clear board before rendering
+            ui.game.board.innerHTML = '';
             for (let r = 0; r < BOARD_ROWS; r++) {
                 for (let c = 0; c < BOARD_COLS; c++) {
                     const hex = document.createElement('div');
@@ -450,10 +603,7 @@
         
         function renderHand() {
             const player = localGameState.players?.[localPlayerId];
-            if (!player?.hand) {
-                 ui.game.handArea.innerHTML = '';
-                 return;
-            }
+            if (!player?.hand) { ui.game.handArea.innerHTML = ''; return; }
             ui.game.handArea.innerHTML = player.hand.map(card => `
                 <div data-hand-id="${card.handId}" class="hand-card bg-gray-800 p-2 rounded w-32 flex-shrink-0 ${selectedHandCardId === card.handId ? 'selected' : ''}">
                     <img src="${card.img}" class="w-full h-16 object-cover rounded-sm mb-2" onerror="this.onerror=null;this.src='${placeholderImg}';">
@@ -469,13 +619,14 @@
         function updateGameInfo() {
             if(!localGameState || !localGameState.players) return;
             ui.game.turnIndicator.textContent = `TURN ${localGameState.turn || 1}`;
-            const phaseMap = { PLACEMENT: '配置フェーズ', STRATEGY: '戦略フェーズ', EXECUTION: '実行フェーズ', COMBAT: '戦闘フェーズ' };
+            const phaseMap = {DECK_BUILDING: 'デッキ構築', PLACEMENT: '配置フェーズ', STRATEGY: '戦略フェーズ' };
             ui.game.phaseIndicator.textContent = phaseMap[localGameState.phase] || '待機中';
 
             const player = localGameState.players?.[localPlayerId];
             const isMyTurn = localGameState.currentPlayerSide === player?.side;
-            ui.game.endPhaseBtn.disabled = !isMyTurn;
-            ui.game.endPhaseBtn.textContent = isMyTurn ? "フェーズ終了" : "相手ターン";
+            const canEndPhase = localGameState.phase === 'PLACEMENT'; 
+            ui.game.endPhaseBtn.disabled = !isMyTurn && !canEndPhase;
+            ui.game.endPhaseBtn.textContent = isMyTurn || canEndPhase ? "フェーズ終了" : "相手ターン";
         }
         
         function updateLog() {
@@ -485,117 +636,28 @@
         }
 
         // --- ゲーム内アクション ---
-        function onHandCardClick(handId) {
-            const player = localGameState.players?.[localPlayerId];
-            if (!player || localGameState.phase !== 'PLACEMENT' || localGameState.currentPlayerSide !== player.side) return;
-            
-            selectedHandCardId = handId;
-            selectedUnitId = null;
-            renderHand();
-            
-            const scenario = scenarios[localGameState.scenario];
-            const zone = player.side === 'federation' ? scenario.federationStartZone : scenario.zeonStartZone;
-            highlightPlacementZone(zone);
-        }
-        
+        function onHandCardClick(handId) {}
         function onUnitClick(unitId) {
-             const player = localGameState.players?.[localPlayerId];
-             if (!player || localGameState.phase !== 'STRATEGY' || localGameState.currentPlayerSide !== player.side) return;
-             const unit = localGameState.units.find(u => u.id === unitId);
-             if(!unit || unit.owner !== localPlayerId || unit.hasActed) return;
-             
-             selectedUnitId = unitId;
-             selectedHandCardId = null;
-             renderAllUnits();
+            const unit = localGameState.units.find(u => u.id === unitId);
+            if (!unit) return;
+            selectedUnitId = unit.id;
+            renderAllUnits();
+
+            const weaponInfo = unit.weapons.map(w => `<li>${w.name} (威力:${w.damage} 射程:${w.range})</li>`).join('');
+            ui.game.unitInfo.innerHTML = `
+                <h4 class="font-bold text-lg">${unit.name}</h4>
+                <p>HP: ${unit.currentHp} / ${unit.hp}</p>
+                <p>EN: ${unit.en}</p>
+                <p>移動力: ${unit.move}</p>
+                <h5 class="font-bold mt-2">武装:</h5>
+                <ul class="list-disc list-inside text-sm">${weaponInfo}</ul>
+            `;
+            ui.game.unitInfo.classList.remove('hidden');
         }
-        
-        async function onHexClick(x, y) {
-            const player = localGameState.players?.[localPlayerId];
-            if (!player) return;
-
-            if (localGameState.phase === 'PLACEMENT' && selectedHandCardId) {
-                const cardInHand = player.hand.find(c => c.handId === selectedHandCardId);
-                if(!cardInHand) return;
-
-                const newUnit = {
-                    ...cardInHand,
-                    id: `${cardInHand.id}-${Math.random().toString(36).substr(2, 5)}`,
-                    currentHp: cardInHand.hp,
-                    x: parseInt(x), y: parseInt(y),
-                    owner: localPlayerId,
-                    side: player.side,
-                    hasActed: false
-                };
-                
-                const newHand = player.hand.filter(c => c.handId !== selectedHandCardId);
-                const updatedUnits = [...(localGameState.units || []), newUnit];
-                
-                const gameRef = doc(db, 'games', localGameState.gameId);
-                await updateDoc(gameRef, {
-                    units: updatedUnits,
-                    [`players.${localPlayerId}.hand`]: newHand,
-                    log: [...localGameState.log, `${player.name}が${newUnit.name}を(${x},${y})に配置。`]
-                });
-                
-                selectedHandCardId = null;
-                clearHighlights();
-            }
-        }
-        
-        async function endPhase() {
-            if(!localGameState.gameId) return;
-            const gameRef = doc(db, 'games', localGameState.gameId);
-            let updates = {};
-            let newLog = [...localGameState.log];
-            const mySide = localGameState.players[localPlayerId].side;
-
-            if (localGameState.phase === 'PLACEMENT') {
-                const teamPlayers = Object.values(localGameState.players).filter(p => p.side === mySide);
-                const allTeamPlaced = teamPlayers.every(p => p.hand.length === 0);
-
-                if (allTeamPlaced) {
-                    newLog.push(`${mySide}チームが配置を完了しました。`);
-                    
-                    const nextSide = mySide === 'federation' ? 'zeon' : 'federation';
-                    const nextTeamPlayers = Object.values(localGameState.players).filter(p => p.side === nextSide);
-                    const isNextTeamPlaced = nextTeamPlayers.every(p => p.hand.length === 0);
-
-                    if(isNextTeamPlaced) {
-                        updates.phase = 'STRATEGY';
-                        updates.currentPlayerSide = 'federation';
-                        newLog.push("全ユニット配置完了。戦略フェーズ開始！");
-                    } else {
-                        updates.currentPlayerSide = nextSide;
-                        newLog.push(`${updates.currentPlayerSide === 'federation' ? '地球連邦軍' : 'ジオン公国軍'}の配置フェーズです。`);
-                    }
-                } else {
-                    alert("まだ配置できるユニットがあります。");
-                    return;
-                }
-            } else if (localGameState.phase === 'STRATEGY') {
-                // 戦略フェーズから実行フェーズへの移行ロジック (TODO)
-            }
-            
-            updates.log = newLog;
-            await updateDoc(gameRef, updates);
-        }
-        
-        function highlightPlacementZone(zone) {
-            clearHighlights();
-            document.querySelectorAll('.hex').forEach(hex => {
-                const x = parseInt(hex.dataset.x);
-                const y = parseInt(hex.dataset.y);
-                if (x >= zone.x && x < zone.x + zone.w && y >= zone.y && y < zone.y + zone.h) {
-                    hex.classList.add('highlight-place');
-                }
-            });
-        }
-
-        function clearHighlights() {
-            document.querySelectorAll('.hex').forEach(h => {
-                h.classList.remove('highlight-move', 'highlight-attack', 'highlight-place');
-            });
-        }
+        async function onHexClick(x, y) {}
+        async function endPhase() {}
+        function highlightPlacementZone(zone) {}
+        function clearHighlights() {}
         
         // --- イベントリスナーの登録 ---
         ui.startAuthBtn.addEventListener('click', handleGameStart);
@@ -605,9 +667,11 @@
         ui.lobby.backToInitialBtn.addEventListener('click', showInitialUI);
         ui.lobby.startGameBtn.addEventListener('click', startGame);
         ui.lobby.copyCodeBtn.addEventListener('click', copyGameCode);
+        ui.sideSelection.chooseFedBtn.addEventListener('click', () => chooseSide('federation'));
+        ui.sideSelection.chooseZeonBtn.addEventListener('click', () => chooseSide('zeon'));
+        ui.mission.confirmBtn.addEventListener('click', confirmMission);
         ui.game.endPhaseBtn.addEventListener('click', endPhase);
         
-        // プレイヤー名変更イベントリスナーを委譲
         ui.lobby.playerList.addEventListener('change', (event) => {
             const target = event.target;
             if (target.tagName === 'INPUT' && target.classList.contains('player-name-input')) {
