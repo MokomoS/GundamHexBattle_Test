@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>機動戦士ガンダム 一年戦争～HEX BATTLE～</title>
+    <title>機動戦士ガンダム 一年戦争オンラインボードゲーム</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; background-color: #111827; color: #e5e7eb; }
         .font-roberto-mono { font-family: 'Roboto Mono', monospace; }
-        #game-board { display: grid; grid-template-columns: repeat(20, 50px); gap: 4px; transform: scale(0.9); transform-origin: top left; }
+        #game-board { display: grid; grid-template-columns: repeat(25, 50px); gap: 4px; transform: scale(0.9); transform-origin: top left; }
         .hex { position: relative; width: 50px; height: 57.74px; background-color: #374151; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); transition: background-color 0.2s; }
         .hex:hover { background-color: #4b5563; }
         .hex.highlight-move { background-color: #60a5fa; opacity: 0.7; cursor: pointer; }
@@ -23,7 +23,7 @@
         .hand-card { cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; position: relative; }
         .hand-card:hover { transform: translateY(-5px) scale(1.05); }
         .hand-card.selected { border-color: #facc15; box-shadow: 0 0 10px #facc15; }
-        .hand-card.discard { opacity: 0.5; border-color: #f87171; }
+        .hand-card.discard { opacity: 0.5; border: 2px dashed #f87171; }
         .modal { backdrop-filter: blur(5px); }
         .pilot-slot { border: 1px dashed #6b7280; min-height: 40px; border-radius: 0.25rem; }
         .pilot-card { cursor: grab; }
@@ -44,64 +44,7 @@
                 <p id="auth-loading-text" class="text-sm text-gray-400 mt-4 hidden">認証中...</p>
             </div>
         </div>
-
-        <!-- Lobby Modal -->
-        <div id="lobby-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
-            <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
-                <h2 class="text-3xl font-bold mb-6 font-roberto-mono">オンラインロビー</h2>
-                <div id="initial-options">
-                    <button id="create-game-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded mb-4 transition-colors">ゲームを作成</button>
-                    <button id="show-join-ui-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition-colors">ゲームに参加</button>
-                </div>
-                <div id="join-game-ui" class="hidden">
-                    <input type="text" id="game-code-input" placeholder="招待コードを入力" class="w-full bg-gray-700 text-white p-3 rounded mb-4 text-center tracking-widest font-roberto-mono">
-                    <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mb-2 transition-colors">参加</button>
-                    <button id="back-to-initial-btn" class="w-full text-gray-400 hover:text-white py-2">戻る</button>
-                </div>
-                <div id="lobby-wait-ui" class="hidden">
-                    <h3 class="text-xl mb-4">ロビー</h3>
-                    <p class="mb-2">招待コード:</p>
-                    <div class="bg-gray-800 p-3 rounded mb-4 flex items-center justify-center">
-                        <span id="game-code-display" class="text-2xl font-bold text-yellow-400 tracking-widest font-roberto-mono mr-4"></span>
-                        <button id="copy-code-btn" class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold py-1 px-2 rounded">コピー</button>
-                    </div>
-                    <div class="mb-4">
-                        <label for="scenario-select" class="block mb-2">シナリオ選択:</label>
-                        <select id="scenario-select" class="w-full bg-gray-700 text-white p-2 rounded">
-                            <option value="side7">サイド7強襲</option>
-                            <option value="odessa">オデッサ作戦</option>
-                        </select>
-                    </div>
-                    <h4 class="text-lg mb-2">参加プレイヤー:</h4>
-                    <ul id="player-list" class="mb-4 text-left space-y-2"></ul>
-                    <button id="start-game-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:bg-gray-600" disabled>ゲーム開始</button>
-                </div>
-                <p id="lobby-error" class="text-red-400 mt-4"></p>
-            </div>
-        </div>
-
-        <!-- Side Selection Modal -->
-        <div id="side-selection-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
-            <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-lg w-full">
-                <h2 class="text-3xl font-bold mb-6 font-roberto-mono">陣営決定</h2>
-                <div id="dice-roll-area" class="space-y-4"></div>
-                <div id="side-choice-area" class="hidden mt-4 space-x-4">
-                    <button id="choose-fed-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">地球連邦軍を選択</button>
-                    <button id="choose-zeon-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">ジオン公国軍を選択</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mission Modal -->
-        <div id="mission-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
-             <div class="bg-gray-900 p-8 rounded-lg shadow-2xl max-w-2xl w-full">
-                <h2 class="text-3xl font-bold mb-6 font-roberto-mono text-center">作戦目標</h2>
-                <div id="mission-content" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-                <div class="text-center mt-6">
-                    <button id="mission-confirm-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded">確認</button>
-                </div>
-            </div>
-        </div>
+        <!-- 他モーダルはJSで動的に生成 -->
     </div>
     
     <div id="game-container" class="hidden">
@@ -145,586 +88,602 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- グローバル変数と定数 ---
-        let firebaseApp, auth, db;
-        let localGameState = {};
-        let localPlayerId = null;
-        let gameUnsubscribe = null;
-        let selectedHandCardId = null;
-        let selectedUnitId = null;
-        let draggedPilotId = null;
+        document.addEventListener('DOMContentLoaded', () => {
+            let firebaseApp, auth, db;
+            let localGameState = {};
+            let localPlayerId = null;
+            let gameUnsubscribe = null;
+            let selectedHandCardId = null;
+            let selectedUnitId = null;
+            let draggedPilotId = null;
+            let isMyTurn = false;
 
-        const ui = {
-            titleScreen: document.getElementById('title-screen-modal'),
-            authLoadingText: document.getElementById('auth-loading-text'),
-            startAuthBtn: document.getElementById('start-auth-btn'),
-            lobby: {
-                modal: document.getElementById('lobby-modal'),
-                initial: document.getElementById('initial-options'),
-                createGameBtn: document.getElementById('create-game-btn'),
-                showJoinUiBtn: document.getElementById('show-join-ui-btn'),
-                joinUI: document.getElementById('join-game-ui'),
-                joinGameBtn: document.getElementById('join-game-btn'),
-                backToInitialBtn: document.getElementById('back-to-initial-btn'),
-                waitUI: document.getElementById('lobby-wait-ui'),
-                codeInput: document.getElementById('game-code-input'),
-                codeDisplay: document.getElementById('game-code-display'),
-                copyCodeBtn: document.getElementById('copy-code-btn'),
-                playerList: document.getElementById('player-list'),
-                startGameBtn: document.getElementById('start-game-btn'),
-                scenarioSelect: document.getElementById('scenario-select'),
-                error: document.getElementById('lobby-error'),
-            },
-            sideSelection: {
-                modal: document.getElementById('side-selection-modal'),
-                diceRollArea: document.getElementById('dice-roll-area'),
-                sideChoiceArea: document.getElementById('side-choice-area'),
-                chooseFedBtn: document.getElementById('choose-fed-btn'),
-                chooseZeonBtn: document.getElementById('choose-zeon-btn'),
-            },
-            mission: {
-                modal: document.getElementById('mission-modal'),
-                content: document.getElementById('mission-content'),
-                confirmBtn: document.getElementById('mission-confirm-btn'),
-            },
-            game: {
-                container: document.getElementById('game-container'),
-                board: document.getElementById('game-board'),
-                playerInfo: document.getElementById('player-info'),
-                turnIndicator: document.getElementById('turn-indicator'),
-                phaseIndicator: document.getElementById('phase-indicator'),
-                unitInfo: document.getElementById('unit-info'),
-                endPhaseBtn: document.getElementById('end-phase-btn'),
-                logMessages: document.getElementById('log-messages'),
-                handArea: document.getElementById('player-hand-area'),
-                deckBuildInfo: document.getElementById('deck-build-info'),
-                bottomPanel: document.getElementById('bottom-panel'),
-            }
-        };
-        
-        const allCards = {
-             warship: [
-                {id: 'WB', name: 'ホワイトベース', side: 'federation', hp: 200, move: 4, capacity: 6, img: 'https://www.gundam.jp/tv/world/mechanic/images/me_whitebase.png'},
-                {id: 'Musai', name: 'ムサイ', side: 'zeon', hp: 150, move: 4, capacity: 4, img: 'https://www.gundam.jp/tv/world/mechanic/images/me_musai.png'},
-             ],
-             ms: [
-                { id: 'RX-78-2', name: "RX-78-2 ガンダム", side: 'federation', cost: 3, hp: 55, en: 40, move: 6, weapons: [{name: 'Beam Rifle', range: 5, damage: 20}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gundam.png'},
-                { id: 'RGM-79', name: "RGM-79 ジム", side: 'federation', cost: 1, hp: 30, en: 25, move: 5, weapons: [{name: 'Beam Spray Gun', range: 3, damage: 12}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gm.png'},
-                { id: 'MS-06F', name: "MS-06F ザクII", side: 'zeon', cost: 1, hp: 28, en: 25, move: 5, weapons: [{name: 'Machine Gun', range: 4, damage: 10}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_zaku.png'},
-                { id: 'MS-06S', name: "シャア専用ザクII", side: 'zeon', cost: 2, hp: 35, en: 30, move: 7, weapons: [{name: 'Machine Gun', range: 4, damage: 12}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_charzaku.png'},
-             ],
-             pilot: [
-                {id: 'Amuro', name: 'アムロ・レイ', side: 'federation', skill: '命中&回避+1', img: 'https://www.gundam.jp/tv/world/character/images/ch_amuro.png'},
-                {id: 'Char', name: 'シャア・アズナブル', side: 'zeon', skill: '移動+1', img: 'https://www.gundam.jp/tv/world/character/images/ch_char.png'},
-             ]
-        };
-        const scenarios = {
-            side7: { 
-                name: 'サイド7強襲', 
-                federationStartZone: {x: 0, y: 0, w: 3, h: 12}, 
-                zeonStartZone: {x: 17, y: 0, w: 3, h: 12},
-                fedMission: 'V作戦のMS3機がマップ右端から脱出する。',
-                zeonMission: 'V作戦のMS3機を全て破壊する。'
-            },
-            odessa: { 
-                name: 'オデッサ作戦', 
-                federationStartZone: {x: 0, y: 0, w: 20, h: 2}, 
-                zeonStartZone: {x: 0, y: 10, w: 20, h: 2},
-                fedMission: 'マップ中央の司令部を10ターン以内に占領する。',
-                zeonMission: '10ターンの間、司令部を防衛する。'
-            }
-        };
-
-        // --- Firebase初期化と認証 ---
-        async function handleGameStart() {
-            ui.authLoadingText.classList.remove('hidden');
-            ui.startAuthBtn.disabled = true;
-            
-            const firebaseConfig = {
-                apiKey: "AIzaSyBEp2wuVwup6lyrUYVxim4EuQLrrKgBFTk",
-                authDomain: "gumdamhexbattle.firebaseapp.com",
-                projectId: "gumdamhexbattle",
-                storageBucket: "gumdamhexbattle.appspot.com",
-                messagingSenderId: "828995733517",
-                appId: "1:828995733517:web:29d2ff0781257a2df5ad44"
+            const ui = {
+                modalContainer: document.getElementById('modal-container'),
+                titleScreen: document.getElementById('title-screen-modal'),
+                authLoadingText: document.getElementById('auth-loading-text'),
+                startAuthBtn: document.getElementById('start-auth-btn'),
+                game: {
+                    container: document.getElementById('game-container'),
+                    board: document.getElementById('game-board'),
+                    playerInfo: document.getElementById('player-info'),
+                    turnIndicator: document.getElementById('turn-indicator'),
+                    phaseIndicator: document.getElementById('phase-indicator'),
+                    unitInfo: document.getElementById('unit-info'),
+                    endPhaseBtn: document.getElementById('end-phase-btn'),
+                    logMessages: document.getElementById('log-messages'),
+                    handArea: document.getElementById('player-hand-area'),
+                    deckBuildInfo: document.getElementById('deck-build-info'),
+                    bottomPanel: document.getElementById('bottom-panel'),
+                }
             };
-
-            try {
-                if (!db) { 
-                    firebaseApp = initializeApp(firebaseConfig);
-                    auth = getAuth(firebaseApp);
-                    db = getFirestore(firebaseApp);
+            
+            const allCards = {
+                 warships: [
+                    {id: 'WB', name: 'ホワイトベース', side: 'federation', hp: 200, move: 4, capacity: 6, img: 'https://www.gundam.jp/tv/world/mechanic/images/me_whitebase.png'},
+                    {id: 'Musai', name: 'ムサイ', side: 'zeon', hp: 150, move: 4, capacity: 4, img: 'https://www.gundam.jp/tv/world/mechanic/images/me_musai.png'},
+                 ],
+                 ms: [
+                    { id: 'RX-78-2', name: "ガンダム", side: 'federation', cost: 3, hp: 55, en: 40, move: 6, weapons: [{name: 'Beam Rifle', range: 5, damage: 20}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gundam.png'},
+                    { id: 'RGM-79', name: "ジム", side: 'federation', cost: 1, hp: 30, en: 25, move: 5, weapons: [{name: 'Beam Spray Gun', range: 3, damage: 12}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gm.png'},
+                    { id: 'MS-06F', name: "ザクII", side: 'zeon', cost: 1, hp: 28, en: 25, move: 5, weapons: [{name: 'Machine Gun', range: 4, damage: 10}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_zaku.png'},
+                    { id: 'MS-06S', name: "シャア専用ザクII", side: 'zeon', cost: 2, hp: 35, en: 30, move: 7, weapons: [{name: 'Machine Gun', range: 4, damage: 12}], img: 'https://www.gundam.jp/tv/world/mechanic/images/me_charzaku.png'},
+                 ],
+                 pilots: [
+                    {id: 'Amuro', name: 'アムロ・レイ', side: 'federation', skill: '命中&回避+1', img: 'https://www.gundam.jp/tv/world/character/images/ch_amuro.png'},
+                    {id: 'Char', name: 'シャア・アズナブル', side: 'zeon', skill: '移動+1', img: 'https://www.gundam.jp/tv/world/character/images/ch_char.png'},
+                 ]
+            };
+            const scenarios = {
+                side7: { 
+                    name: 'サイド7強襲', 
+                    federationStartZone: {x: 0, y: 0, w: 3, h: 12}, 
+                    zeonStartZone: {x: 17, y: 0, w: 20, h: 12},
+                    fedMission: 'V作戦のMS3機がマップ右端から脱出する。',
+                    zeonMission: 'V作戦のMS3機を全て破壊する。'
+                },
+                odessa: { 
+                    name: 'オデッサ作戦', 
+                    federationStartZone: {x: 0, y: 0, w: 20, h: 2}, 
+                    zeonStartZone: {x: 0, y: 10, w: 20, h: 12},
+                    fedMission: 'マップ中央の司令部を10ターン以内に占領する。',
+                    zeonMission: '10ターンの間、司令部を防衛する。'
                 }
+            };
+            
+            // --- イベントリスナー登録 ---
+            ui.startAuthBtn.addEventListener('click', handleGameStart);
 
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        localPlayerId = user.uid;
-                        console.log("Authenticated with ID:", localPlayerId);
-                        ui.titleScreen.classList.add('hidden');
-                        ui.lobby.modal.classList.remove('hidden');
-                    }
-                });
-
-                if (!auth.currentUser) {
-                    await signInAnonymously(auth);
-                } else {
-                    localPlayerId = auth.currentUser.uid;
-                    ui.titleScreen.classList.add('hidden');
-                    ui.lobby.modal.classList.remove('hidden');
-                }
-
-            } catch(error) {
-                console.error("Firebase Initialization/Auth Error:", error);
-                ui.authLoadingText.classList.add('text-red-500');
-                if (error.code === 'auth/configuration-not-found') {
-                    ui.authLoadingText.innerHTML = `Firebase設定エラー: 匿名認証が有効になっていません。<br>Firebaseコンソールで設定を確認してください。`;
-                    alert("Firebase設定エラー (auth/configuration-not-found):\n\nこのアプリでは「匿名認証」が必要です。Firebaseプロジェクトで有効にしてください。\n\n手順:\n1. Firebaseコンソール > Authentication > Sign-in method\n2. プロバイダリストから「匿名」を選択し、有効にして保存します。");
-                } else {
-                    ui.authLoadingText.textContent = `認証エラー: ${error.message}`;
-                }
-                ui.startAuthBtn.disabled = false;
-            }
-        }
-        
-        function showJoinUI() { ui.lobby.initial.classList.add('hidden'); ui.lobby.joinUI.classList.remove('hidden'); };
-        function showInitialUI() { ui.lobby.joinUI.classList.add('hidden'); ui.lobby.initial.classList.remove('hidden'); };
-        
-        async function createGame() {
-            if (!localPlayerId) { alert("認証が完了していません。"); return; }
-            ui.lobby.createGameBtn.disabled = true;
-
-            try {
-                const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
-                const hostPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: true, diceRoll: null, isReady: false, deck: {} };
-                const initialGameState = {
-                    gameId: gameId,
-                    status: 'lobby',
-                    players: { [localPlayerId]: hostPlayer },
-                    scenario: 'side7',
-                    log: [`ゲーム[${gameId}]が作成されました。`],
-                    createdAt: serverTimestamp()
+            // --- 関数定義 ---
+            async function handleGameStart() {
+                ui.authLoadingText.classList.remove('hidden');
+                ui.startAuthBtn.disabled = true;
+                
+                const firebaseConfig = {
+                    apiKey: "AIzaSyBEp2wuVwup6lyrUYVxim4EuQLrrKgBFTk",
+                    authDomain: "gumdamhexbattle.firebaseapp.com",
+                    projectId: "gumdamhexbattle",
+                    storageBucket: "gumdamhexbattle.appspot.com",
+                    messagingSenderId: "828995733517",
+                    appId: "1:828995733517:web:29d2ff0781257a2df5ad44"
                 };
+
+                try {
+                    if (!db) { 
+                        firebaseApp = initializeApp(firebaseConfig);
+                        auth = getAuth(firebaseApp);
+                        db = getFirestore(firebaseApp);
+                    }
+
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            localPlayerId = user.uid;
+                            console.log("Authenticated with ID:", localPlayerId);
+                            ui.titleScreen.classList.add('hidden');
+                            showLobby();
+                        }
+                    });
+
+                    if (!auth.currentUser) {
+                        await signInAnonymously(auth);
+                    } else {
+                        localPlayerId = auth.currentUser.uid;
+                        ui.titleScreen.classList.add('hidden');
+                        showLobby();
+                    }
+                } catch(error) {
+                    console.error("Firebase Initialization/Auth Error:", error);
+                    ui.authLoadingText.classList.add('text-red-500');
+                    if (error.code === 'auth/configuration-not-found') {
+                        ui.authLoadingText.innerHTML = `Firebase設定エラー: 匿名認証が有効になっていません。<br>Firebaseコンソールで設定を確認してください。`;
+                    } else {
+                        ui.authLoadingText.textContent = `認証エラー: ${error.message}`;
+                    }
+                    ui.startAuthBtn.disabled = false;
+                }
+            }
+            
+            function showLobby() {
+                clearModals();
+                const lobbyModalHTML = `
+                <div id="lobby-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+                    <div class="bg-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+                        <h2 class="text-3xl font-bold mb-6 font-roberto-mono">オンラインロビー</h2>
+                        <div id="initial-options">
+                            <button id="create-game-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded mb-4 transition-colors">ゲームを作成</button>
+                            <button id="show-join-ui-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition-colors">ゲームに参加</button>
+                        </div>
+                        <div id="join-game-ui" class="hidden">
+                            <input type="text" id="game-code-input" placeholder="招待コードを入力" class="w-full bg-gray-700 text-white p-3 rounded mb-4 text-center tracking-widest font-roberto-mono">
+                            <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mb-2 transition-colors">参加</button>
+                            <button id="back-to-initial-btn" class="w-full text-gray-400 hover:text-white py-2">戻る</button>
+                        </div>
+                        <div id="lobby-wait-ui" class="hidden">
+                            <h3 class="text-xl mb-4">ロビー</h3>
+                            <p class="mb-2">招待コード:</p>
+                            <div class="bg-gray-800 p-3 rounded mb-4 flex items-center justify-center">
+                                <span id="game-code-display" class="text-2xl font-bold text-yellow-400 tracking-widest font-roberto-mono mr-4"></span>
+                                <button id="copy-code-btn" class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold py-1 px-2 rounded">コピー</button>
+                            </div>
+                            <div class="mb-4">
+                                <label for="scenario-select" class="block mb-2">シナリオ選択:</label>
+                                <select id="scenario-select" class="w-full bg-gray-700 text-white p-2 rounded">
+                                    <option value="side7">サイド7強襲</option>
+                                    <option value="odessa">オデッサ作戦</option>
+                                </select>
+                            </div>
+                            <h4 class="text-lg mb-2">参加プレイヤー:</h4>
+                            <ul id="player-list" class="mb-4 text-left space-y-2"></ul>
+                            <button id="start-game-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors" disabled>ゲーム開始</button>
+                        </div>
+                        <p id="lobby-error" class="text-red-400 mt-4"></p>
+                    </div>
+                </div>`;
+                ui.modalContainer.innerHTML = lobbyModalHTML;
+                
+                // イベントリスナーを再設定
+                document.getElementById('create-game-btn').addEventListener('click', createGame);
+                document.getElementById('show-join-ui-btn').addEventListener('click', () => {
+                    document.getElementById('initial-options').classList.add('hidden');
+                    document.getElementById('join-game-ui').classList.remove('hidden');
+                });
+                document.getElementById('join-game-btn').addEventListener('click', () => joinGame(document.getElementById('game-code-input').value));
+                document.getElementById('back-to-initial-btn').addEventListener('click', () => {
+                     document.getElementById('join-game-ui').classList.add('hidden');
+                    document.getElementById('initial-options').classList.remove('hidden');
+                });
+            }
+            
+            // ... 他のゲームロジック関数
+            async function createGame() {
+                if (!localPlayerId) { alert("認証が完了していません。"); return; }
+                document.getElementById('create-game-btn').disabled = true;
+
+                try {
+                    const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
+                    const hostPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: true, diceRoll: null, isReady: false, deck: {} };
+                    const initialGameState = { gameId, status: 'lobby', players: { [localPlayerId]: hostPlayer }, scenario: 'side7', log: [`ゲーム[${gameId}]が作成されました。`], createdAt: serverTimestamp() };
+                    const gameRef = doc(db, 'games', gameId);
+                    await setDoc(gameRef, initialGameState);
+                    await attachToGame(gameId);
+                } catch (error) {
+                    console.error("Error creating game:", error);
+                    const errorElem = document.getElementById('lobby-error');
+                    if (error.code === 'permission-denied') {
+                        errorElem.textContent = "データベースへの書き込み権限がありません。Firestoreのセキュリティルールを確認してください。";
+                    } else {
+                        errorElem.textContent = "ゲームの作成に失敗しました。";
+                    }
+                    document.getElementById('create-game-btn').disabled = false;
+                }
+            };
+            
+            async function joinGame(gameId) {
+                if (!gameId) { document.getElementById('lobby-error').textContent = "招待コードを入力してください。"; return; }
+                if (!localPlayerId) { alert("認証が完了していません。"); return; }
 
                 const gameRef = doc(db, 'games', gameId);
-                await setDoc(gameRef, initialGameState);
-                await attachToGame(gameId);
-            } catch (error) {
-                console.error("Error creating game:", error);
-                if (error.code === 'permission-denied') {
-                    ui.lobby.error.textContent = "データベースへの書き込み権限がありません。Firestoreのセキュリティルールを確認してください。";
-                    alert("Firestoreセキュリティルールエラー:\n\nデータベースへの書き込みが拒否されました。これは通常、セキュリティルールが設定されていないか、正しくないことが原因です。\n\n次の手順でルールを更新してください:\n1. FirebaseコンソールでFirestore Databaseを開く\n2. 「ルール」タブを選択\n3. 以下のルールを貼り付けて公開する:\n\nrules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /games/{gameId} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}");
-                } else {
-                    ui.lobby.error.textContent = "ゲームの作成に失敗しました。コンソールを確認してください。";
-                }
-                ui.lobby.createGameBtn.disabled = false;
-            }
-        };
-        
-        async function joinGame() {
-            const gameId = ui.lobby.codeInput.value.toUpperCase();
-            if (!gameId) { ui.lobby.error.textContent = "招待コードを入力してください。"; return; }
-            if (!localPlayerId) { alert("認証が完了していません。"); return; }
-
-            const gameRef = doc(db, 'games', gameId);
-            try {
-                const gameSnap = await getDoc(gameRef);
-
-                if (gameSnap.exists()) {
-                    const gameData = gameSnap.data();
-                    if (Object.keys(gameData.players).length >= 4) { ui.lobby.error.textContent = "このゲームは満員です。"; return; }
-                    const newPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: false, diceRoll: null, isReady: false, deck: {} };
-                    await updateDoc(gameRef, { [`players.${localPlayerId}`]: newPlayer });
-                    await attachToGame(gameId);
-                } else {
-                    ui.lobby.error.textContent = "ゲームが見つかりません。";
-                }
-            } catch (error) {
-                 console.error("Error joining game:", error);
-                 ui.lobby.error.textContent = "ゲームへの参加に失敗しました。";
-            }
-        };
-
-        async function attachToGame(gameId) {
-            ui.lobby.initial.classList.add('hidden');
-            ui.lobby.joinUI.classList.add('hidden');
-            ui.lobby.waitUI.classList.remove('hidden');
-            ui.lobby.codeDisplay.textContent = gameId;
-
-            if (gameUnsubscribe) gameUnsubscribe();
-            
-            gameUnsubscribe = onSnapshot(doc(db, 'games', gameId), (docSnap) => {
-                if (docSnap.exists()) {
-                    const gameData = docSnap.data();
-                    localGameState = gameData;
-                    
-                    switch(gameData.status) {
-                        case 'lobby':
-                            renderLobby();
-                            break;
-                        case 'side_selection':
-                            ui.lobby.modal.classList.add('hidden');
-                            ui.sideSelection.modal.classList.remove('hidden');
-                            renderSideSelection();
-                            break;
-                        case 'mission_briefing':
-                            ui.sideSelection.modal.classList.add('hidden');
-                            ui.mission.modal.classList.remove('hidden');
-                            renderMissionBriefing();
-                            break;
-                        case 'deck_building':
-                        case 'placement':
-                        case 'playing':
-                            ui.mission.modal.classList.add('hidden');
-                            ui.lobby.modal.classList.add('hidden');
-                            ui.sideSelection.modal.classList.add('hidden');
-                            ui.game.container.classList.remove('hidden');
-                            renderGameUI();
-                            break;
+                try {
+                    const gameSnap = await getDoc(gameRef);
+                    if (gameSnap.exists()) {
+                        const gameData = gameSnap.data();
+                        if (Object.keys(gameData.players).length >= 4) { document.getElementById('lobby-error').textContent = "このゲームは満員です。"; return; }
+                        const newPlayer = { id: localPlayerId, name: `Player ${Math.floor(Math.random() * 1000)}`, side: null, isHost: false, diceRoll: null, isReady: false, deck: {} };
+                        await updateDoc(gameRef, { [`players.${localPlayerId}`]: newPlayer });
+                        await attachToGame(gameId);
+                    } else {
+                        document.getElementById('lobby-error').textContent = "ゲームが見つかりません。";
                     }
-                    if (gameData.status === 'mission_briefing' || gameData.status === 'deck_building' || gameData.status === 'placement') {
-                        checkAllPlayersReady();
+                } catch (error) {
+                    console.error("Error joining game:", error);
+                    document.getElementById('lobby-error').textContent = "ゲームへの参加に失敗しました。";
+                }
+            };
+
+            async function attachToGame(gameId) {
+                document.getElementById('initial-options').classList.add('hidden');
+                document.getElementById('join-game-ui').classList.add('hidden');
+                const waitUI = document.getElementById('lobby-wait-ui');
+                waitUI.classList.remove('hidden');
+                waitUI.querySelector('#game-code-display').textContent = gameId;
+                
+                waitUI.querySelector('#copy-code-btn').addEventListener('click', copyGameCode);
+                waitUI.querySelector('#start-game-btn').addEventListener('click', startGame);
+                waitUI.querySelector('#player-list').addEventListener('change', (event) => {
+                    const target = event.target;
+                    if (target.tagName === 'INPUT' && target.classList.contains('player-name-input')) {
+                        updatePlayerName(target.dataset.playerId, target.value);
                     }
-                } else {
-                    alert("ゲームが終了または削除されました。");
-                    if(gameUnsubscribe) gameUnsubscribe();
-                    location.reload();
-                }
-            });
-        }
-        
-        function renderLobby() {
-            const players = Object.values(localGameState.players);
-            ui.lobby.playerList.innerHTML = players.map(p => {
-                if(p.id === localPlayerId) {
-                    return `<li class="flex items-center">
-                                <input type="text" data-player-id="${p.id}" value="${p.name}" class="player-name-input bg-gray-700 text-white p-1 rounded w-full">
-                                <span class="ml-2 text-yellow-400">(あなた)</span>
-                            </li>`;
-                }
-                return `<li class="p-1">${p.name} ${p.isHost ? '(ホスト)' : ''}</li>`;
-            }).join('');
-            
-            const isHost = localGameState.players[localPlayerId]?.isHost;
-            ui.lobby.scenarioSelect.disabled = !isHost;
-            ui.lobby.startGameBtn.disabled = players.length < 2 || !isHost;
+                });
 
-            if (isHost) {
-                ui.lobby.scenarioSelect.onchange = () => {
-                    updateDoc(doc(db, 'games', localGameState.gameId), { scenario: ui.lobby.scenarioSelect.value });
-                };
-            } else {
-                 ui.lobby.scenarioSelect.value = localGameState.scenario;
-            }
-        }
-
-        async function updatePlayerName(playerId, newName) {
-            if (!localGameState.gameId || !playerId || !newName) return;
-            await updateDoc(doc(db, 'games', localGameState.gameId), { [`players.${playerId}.name`]: newName });
-        }
-
-        function copyGameCode() {
-            navigator.clipboard.writeText(ui.lobby.codeDisplay.textContent).then(() => {
-                ui.lobby.copyCodeBtn.textContent = 'コピー完了!';
-                setTimeout(() => { ui.lobby.copyCodeBtn.textContent = 'コピー'; }, 2000);
-            });
-        }
-        
-        async function startGame() {
-            if (!localGameState || !localGameState.gameId) return;
-            await updateDoc(doc(db, 'games', localGameState.gameId), { status: 'side_selection' });
-        };
-        
-        function renderSideSelection() {
-            const players = Object.values(localGameState.players);
-            const me = localGameState.players[localPlayerId];
-            ui.sideSelection.diceRollArea.innerHTML = players.map(p => {
-                let rollButton = '';
-                if (p.id === localPlayerId && !p.diceRoll) {
-                    rollButton = `<button data-player-id="${p.id}" class="roll-dice-btn bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-1 px-3 rounded ml-4">ダイスを振る</button>`;
-                }
-                return `<div class="p-2">${p.name}: <span class="text-2xl font-bold">${p.diceRoll || '?'}</span>${rollButton}</div>`;
-            }).join('');
-            
-            document.querySelectorAll('.roll-dice-btn').forEach(btn => btn.addEventListener('click', rollDice));
-            
-            const allRolled = players.every(p => p.diceRoll);
-            if(allRolled) {
-                const winner = players.reduce((a, b) => a.diceRoll >= b.diceRoll ? a : b); 
-                 if(winner.id === localPlayerId) {
-                     ui.sideSelection.sideChoiceArea.classList.remove('hidden');
-                 } else {
-                     ui.sideSelection.sideChoiceArea.classList.add('hidden');
-                     ui.sideSelection.diceRollArea.innerHTML += `<p class="mt-4 text-amber-400">${winner.name}が陣営を選択中です...</p>`;
-                 }
-            }
-        }
-        
-        async function rollDice(event) {
-            const playerId = event.target.dataset.playerId;
-            event.target.disabled = true;
-            const roll = Math.floor(Math.random() * 6) + 1;
-            await updateDoc(doc(db, 'games', localGameState.gameId), { [`players.${playerId}.diceRoll`]: roll });
-        }
-
-        async function chooseSide(side) {
-            const gameRef = doc(db, 'games', localGameState.gameId);
-            const players = localGameState.players;
-            const winnerId = localPlayerId;
-            const otherPlayerIds = Object.keys(players).filter(id => id !== winnerId);
-            
-            const updates = {};
-            updates[`players.${winnerId}.side`] = side;
-            
-            let fedCount = side === 'federation' ? 1 : 0;
-            let fedMax = Math.ceil(Object.keys(players).length / 2);
-            
-            otherPlayerIds.forEach(id => {
-                updates[`players.${id}.side`] = (fedCount < fedMax) ? 'federation' : 'zeon';
-                if (updates[`players.${id}.side`] === 'federation') fedCount++;
-            });
-            updates.status = 'mission_briefing';
-            await updateDoc(gameRef, updates);
-        }
-        
-        function renderMissionBriefing() {
-            const scenario = scenarios[localGameState.scenario];
-            const me = localGameState.players[localPlayerId];
-            
-            ui.mission.content.innerHTML = `
-                <div class="bg-blue-900 bg-opacity-50 p-4 rounded">
-                    <h3 class="font-bold text-lg text-blue-300">地球連邦軍 作戦目標</h3>
-                    <p>${scenario.fedMission}</p>
-                </div>
-                 <div class="bg-green-900 bg-opacity-50 p-4 rounded">
-                    <h3 class="font-bold text-lg text-green-300">ジオン公国軍 作戦目標</h3>
-                    <p>${scenario.zeonMission}</p>
-                </div>
-            `;
-            ui.mission.confirmBtn.disabled = me.isReady;
-            ui.mission.confirmBtn.textContent = me.isReady ? '相手の確認を待っています...' : '確認';
-        }
-
-        async function confirmMission() {
-             await updateDoc(doc(db, 'games', localGameState.gameId), { [`players.${localPlayerId}.isReady`]: true });
-        }
-        
-        function checkAllPlayersReady() {
-            if (!localGameState || !localGameState.players) return;
-            const allReady = Object.values(localGameState.players).every(p => p.isReady);
-            if (!allReady) return;
-
-            const gameRef = doc(db, 'games', localGameState.gameId);
-            const currentStatus = localGameState.status;
-            let nextStatus = '';
-            let logMessage = '';
-
-            let playersData = localGameState.players;
-            Object.keys(playersData).forEach(k => {
-                playersData[k].isReady = false; 
-            });
-
-            if (currentStatus === 'mission_briefing') {
-                nextStatus = 'deck_building';
-                logMessage = "全プレイヤー作戦目標確認。デッキ構築を開始します。";
-                Object.keys(playersData).forEach(k => { playersData[k].diceRoll = null; });
-                dealInitialCards(playersData);
-            } else if (currentStatus === 'deck_building') {
-                nextStatus = 'placement';
-                logMessage = "全プレイヤーデッキ確定。ユニット配置を開始します。";
-            }
-            
-            if (nextStatus) {
-                updateDoc(gameRef, { 
-                    status: nextStatus,
-                    players: playersData,
-                    log: [...localGameState.log, logMessage]
+                if (gameUnsubscribe) gameUnsubscribe();
+                
+                gameUnsubscribe = onSnapshot(doc(db, 'games', gameId), (docSnap) => {
+                    if (docSnap.exists()) {
+                        localGameState = docSnap.data();
+                        handleStateChange(localGameState);
+                    } else {
+                        if(gameUnsubscribe) gameUnsubscribe();
+                        alert("ゲームが終了または削除されました。");
+                        location.reload();
+                    }
                 });
             }
-        }
-        
-        function dealInitialCards(playersData) {
-            Object.values(playersData).forEach(player => {
-                const side = player.side;
-                const shuffledMS = [...allCards.ms.filter(c => c.side === side)].sort(() => 0.5 - Math.random());
+
+            function handleStateChange(gs) {
+                switch(gs.status) {
+                    case 'lobby': renderLobby(gs); break;
+                    case 'side_selection': renderSideSelection(gs); break;
+                    case 'mission_briefing': renderMissionBriefing(gs); break;
+                    case 'deck_building':
+                    case 'placement':
+                    case 'playing':
+                        clearModals();
+                        ui.game.container.classList.remove('hidden');
+                        renderGameUI(gs);
+                        break;
+                }
+                if (gs.status === 'mission_briefing' || gs.status === 'deck_building' || gs.status === 'placement') {
+                    checkAllPlayersReady();
+                }
+            }
+
+            function renderLobby(gs) {
+                const waitUI = document.getElementById('lobby-wait-ui');
+                if(!waitUI) return;
                 
-                player.hand = {
-                    warships: [...allCards.warship.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 2).map(c => ({...c, handId: `warship-${c.id}-${Math.random()}`})),
-                    ms: shuffledMS.slice(0, 8).map(c => ({...c, handId: `ms-${c.id}-${Math.random()}`, pilot: null})),
-                    pilots: [...allCards.pilot.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 3).map(c => ({...c, handId: `pilot-${c.id}-${Math.random()}`})),
-                };
-                player.graveyard = [];
-                player.deck = [];
-            });
-        }
-        
-        function renderGameUI() {
-            renderBoard();
-            renderAllUnits();
-            renderPlayerInfo();
-            updateGameInfo();
-            updateLog();
-            
-            const phase = localGameState.phase;
-            if (phase === 'deck_building') renderDeckBuilding();
-            else if (phase === 'placement') renderPlacement();
-        }
+                const players = Object.values(gs.players);
+                waitUI.querySelector('#player-list').innerHTML = players.map(p => {
+                    if(p.id === localPlayerId) {
+                        return `<li class="flex items-center"><input type="text" data-player-id="${p.id}" value="${p.name}" class="player-name-input bg-gray-700 text-white p-1 rounded w-full"><span class="ml-2 text-yellow-400">(あなた)</span></li>`;
+                    }
+                    return `<li class="p-1">${p.name} ${p.isHost ? '(ホスト)' : ''}</li>`;
+                }).join('');
+                
+                const isHost = gs.players[localPlayerId]?.isHost;
+                const startGameBtn = waitUI.querySelector('#start-game-btn');
+                const scenarioSelect = waitUI.querySelector('#scenario-select');
+                
+                scenarioSelect.disabled = !isHost;
+                startGameBtn.disabled = players.length < 2 || !isHost;
 
-        function renderDeckBuilding() {
-            const player = localGameState.players?.[localPlayerId];
-            if (!player || !player.hand) return;
-            
-            let totalCost = player.hand.ms.reduce((sum, ms) => sum + ms.cost, 0);
-
-            ui.game.deckBuildInfo.innerHTML = `
-                <span class="mr-4">MSコスト: <span class="${totalCost > 10 ? 'cost-over' : ''}">${totalCost}</span> / 10</span>
-                <button id="confirm-deck-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded disabled:bg-gray-500" ${totalCost > 10 ? 'disabled' : ''}>デッキ確定</button>
-            `;
-            document.getElementById('confirm-deck-btn').addEventListener('click', confirmDeck);
-
-            const msHtml = player.hand.ms.map(c => renderCard(c, 'ms')).join('');
-            const pilotsHtml = player.hand.pilots.map(c => renderCard(c, 'pilot')).join('');
-
-            ui.game.handArea.innerHTML = `
-                <div class="w-full">
-                    <h4 class="text-sm font-bold text-gray-400 mb-2">MS/MA (クリックしてコスト10以下にする)</h4>
-                    <div class="flex space-x-2">${msHtml}</div>
-                    <h4 class="text-sm font-bold text-gray-400 mt-4 mb-2">パイロット (ドラッグしてMSに乗せる)</h4>
-                    <div class="flex space-x-2">${pilotsHtml}</div>
-                </div>
-            `;
-            addDeckBuildingEventListeners();
-        }
-
-        function renderPlacement() {
-            // TODO: Render placement UI
-        }
-
-        function renderCard(card, type) {
-            let pilotInfo = '';
-            if (type === 'ms' && card.pilot) {
-                pilotInfo = `<img src="${card.pilot.img}" class="w-6 h-6 rounded-full absolute -top-1 -right-1 border-2 border-yellow-400">`;
-            }
-            return `
-                <div data-hand-id="${card.handId}" data-card-type="${type}" draggable="${type === 'pilot'}" class="hand-card ${type}-card bg-gray-800 p-2 rounded w-32 flex-shrink-0 relative">
-                    <img src="${card.img}" class="w-full h-16 object-cover rounded-sm mb-2 pointer-events-none" onerror="this.onerror=null;this.src='${placeholderImg}';">
-                    <p class="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis pointer-events-none">${card.name}</p>
-                    ${type === 'ms' ? `<p class="text-xs text-gray-400 pointer-events-none">Cost: ${card.cost}</p>` : ''}
-                    ${pilotInfo}
-                </div>`;
-        }
-
-        function addDeckBuildingEventListeners() {
-            document.querySelectorAll('.ms-card').forEach(cardEl => {
-                cardEl.addEventListener('click', () => discardMsCard(cardEl.dataset.handId));
-                cardEl.addEventListener('dragover', (e) => e.preventDefault());
-                cardEl.addEventListener('drop', (e) => dropPilotOnMs(e, cardEl.dataset.handId));
-            });
-            document.querySelectorAll('.pilot-card').forEach(cardEl => {
-                cardEl.addEventListener('dragstart', (e) => (draggedPilotId = cardEl.dataset.handId));
-            });
-        }
-        
-        async function discardMsCard(handId) {
-            const player = localGameState.players[localPlayerId];
-            const cardToDiscard = player.hand.ms.find(c => c.handId === handId);
-            if (!cardToDiscard) return;
-
-            const newMsHand = player.hand.ms.filter(c => c.handId !== handId);
-            const newGraveyard = [...(player.graveyard || []), cardToDiscard];
-            
-            await updateDoc(doc(db, 'games', localGameState.gameId), {
-                [`players.${localPlayerId}.hand.ms`]: newMsHand,
-                [`players.${localPlayerId}.graveyard`]: newGraveyard,
-            });
-        }
-
-        async function dropPilotOnMs(event, msHandId) {
-            event.preventDefault();
-            if (!draggedPilotId) return;
-
-            const player = localGameState.players[localPlayerId];
-            const pilotCard = player.hand.pilots.find(p => p.handId === draggedPilotId);
-            const msCard = player.hand.ms.find(m => m.handId === msHandId);
-            if (!pilotCard || !msCard) return;
-
-            player.hand.ms.forEach(m => {
-                if(m.pilot && m.pilot.handId === draggedPilotId) m.pilot = null;
-            });
-
-            msCard.pilot = pilotCard;
-            
-            await updateDoc(doc(db, 'games', localGameState.gameId), {
-                 [`players.${localPlayerId}.hand.ms`]: player.hand.ms,
-            });
-            draggedPilotId = null;
-        }
-
-        async function confirmDeck() {
-            const player = localGameState.players[localPlayerId];
-            const finalDeck = [...player.hand.warships, ...player.hand.ms];
-
-            await updateDoc(doc(db, 'games', localGameState.gameId), {
-                [`players.${localPlayerId}.deck`]: finalDeck,
-                [`players.${localPlayerId}.isReady`]: true,
-            });
-        }
-
-        function renderBoard() {
-            if (ui.game.board.children.length > 0) return;
-            ui.game.board.innerHTML = '';
-            for (let r = 0; r < 12; r++) { // BOARD_ROWS
-                for (let c = 0; c < 20; c++) { // BOARD_COLS
-                    const hex = document.createElement('div');
-                    hex.classList.add('hex');
-                    hex.dataset.x = c;
-                    hex.dataset.y = r;
-                    hex.addEventListener('click', () => onHexClick(c, r));
-                    ui.game.board.appendChild(hex);
+                if (isHost) {
+                    scenarioSelect.onchange = () => updateDoc(doc(db, 'games', gs.gameId), { scenario: scenarioSelect.value });
+                } else {
+                    scenarioSelect.value = gs.scenario;
                 }
             }
-        }
+
+            async function updatePlayerName(playerId, newName) {
+                if (!localGameState.gameId || !playerId || !newName) return;
+                await updateDoc(doc(db, 'games', localGameState.gameId), { [`players.${playerId}.name`]: newName });
+            }
+
+            function copyGameCode() {
+                const code = document.getElementById('game-code-display').textContent;
+                navigator.clipboard.writeText(code).then(() => {
+                    const btn = document.getElementById('copy-code-btn');
+                    btn.textContent = 'コピー完了!';
+                    setTimeout(() => { btn.textContent = 'コピー'; }, 2000);
+                });
+            }
+            
+            async function startGame() {
+                if (!localGameState || !localGameState.gameId) return;
+                await updateDoc(doc(db, 'games', localGameState.gameId), { status: 'side_selection' });
+            };
         
-        function onUnitClick(unitId) {
-            const unit = localGameState.units.find(u => u.id === unitId);
-            if (!unit) return;
-            selectedUnitId = unit.id;
-            renderAllUnits();
+            function renderSideSelection(gs) {
+                clearModals();
+                const content = `
+                    <div id="dice-roll-area" class="space-y-4"></div>
+                    <div id="side-choice-area" class="hidden mt-4 space-x-4">
+                        <button id="choose-fed-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">地球連邦軍を選択</button>
+                        <button id="choose-zeon-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">ジオン公国軍を選択</button>
+                    </div>`;
+                const modal = createModal('side-selection-modal', '陣営決定', content);
+                ui.modalContainer.appendChild(modal);
 
-            let pilotInfoHtml = unit.pilot ? `<h6 class="font-bold mt-2 text-yellow-400">搭乗員: ${unit.pilot.name}</h6><p class="text-sm pl-2">${unit.pilot.skill}</p>` : '';
-            const weaponInfo = unit.weapons.map(w => `<li>${w.name} (威力:${w.damage} 射程:${w.range})</li>`).join('');
-            
-            ui.game.unitInfo.innerHTML = `
-                <h4 class="font-bold text-lg">${unit.name}</h4>
-                <p>HP: ${unit.currentHp} / ${unit.hp}</p>
-                <p>EN: ${unit.en}</p>
-                <p>移動力: ${unit.move}</p>
-                ${pilotInfoHtml}
-                <h5 class="font-bold mt-2">武装:</h5>
-                <ul class="list-disc list-inside text-sm">${weaponInfo}</ul>
-            `;
-            ui.game.unitInfo.classList.remove('hidden');
-        }
-
-        // --- イベントリスナーの登録 ---
-        document.addEventListener('DOMContentLoaded', () => {
-            ui.startAuthBtn.addEventListener('click', handleGameStart);
-            ui.lobby.createGameBtn.addEventListener('click', createGame);
-            ui.lobby.showJoinUiBtn.addEventListener('click', showJoinUI);
-            ui.lobby.joinGameBtn.addEventListener('click', joinGame);
-            ui.lobby.backToInitialBtn.addEventListener('click', showInitialUI);
-            ui.lobby.startGameBtn.addEventListener('click', startGame);
-            ui.lobby.copyCodeBtn.addEventListener('click', copyGameCode);
-            ui.sideSelection.chooseFedBtn.addEventListener('click', () => chooseSide('federation'));
-            ui.sideSelection.chooseZeonBtn.addEventListener('click', () => chooseSide('zeon'));
-            ui.mission.confirmBtn.addEventListener('click', confirmMission);
-            ui.game.endPhaseBtn.addEventListener('click', () => {}); // Placeholder
-            
-            ui.lobby.playerList.addEventListener('change', (event) => {
-                const target = event.target;
-                if (target.tagName === 'INPUT' && target.classList.contains('player-name-input')) {
-                    updatePlayerName(target.dataset.playerId, target.value);
+                const players = Object.values(gs.players);
+                modal.querySelector('#dice-roll-area').innerHTML = players.map(p => {
+                    let rollButton = '';
+                    if (p.id === localPlayerId && !p.diceRoll) {
+                        rollButton = `<button data-player-id="${p.id}" class="roll-dice-btn bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-1 px-3 rounded ml-4">ダイスを振る</button>`;
+                    }
+                    return `<div class="p-2">${p.name}: <span class="text-2xl font-bold">${p.diceRoll || '?'}</span>${rollButton}</div>`;
+                }).join('');
+                
+                modal.querySelectorAll('.roll-dice-btn').forEach(btn => btn.addEventListener('click', rollDice));
+                
+                const allRolled = players.every(p => p.diceRoll);
+                if(allRolled) {
+                    const winner = players.reduce((a, b) => a.diceRoll >= b.diceRoll ? a : b); 
+                     if(winner.id === localPlayerId) {
+                         modal.querySelector('#side-choice-area').classList.remove('hidden');
+                     } else {
+                         modal.querySelector('#side-choice-area').classList.add('hidden');
+                         modal.querySelector('#dice-roll-area').innerHTML += `<p class="mt-4 text-amber-400">${winner.name}が陣営を選択中です...</p>`;
+                     }
                 }
-            });
+                modal.querySelector('#choose-fed-btn').addEventListener('click', () => chooseSide('federation'));
+                modal.querySelector('#choose-zeon-btn').addEventListener('click', () => chooseSide('zeon'));
+            }
+        
+            async function rollDice(event) {
+                event.target.disabled = true;
+                const roll = Math.floor(Math.random() * 6) + 1;
+                await updateDoc(doc(db, 'games', localGameState.gameId), { [`players.${localPlayerId}.diceRoll`]: roll });
+            }
+
+            async function chooseSide(side) {
+                const gameRef = doc(db, 'games', localGameState.gameId);
+                const players = localGameState.players;
+                const winnerId = localPlayerId;
+                const otherPlayerIds = Object.keys(players).filter(id => id !== winnerId);
+                
+                const updates = {};
+                updates[`players.${winnerId}.side`] = side;
+                
+                let fedCount = side === 'federation' ? 1 : 0;
+                let fedMax = Math.ceil(Object.keys(players).length / 2);
+                
+                otherPlayerIds.forEach(id => {
+                    updates[`players.${id}.side`] = (fedCount < fedMax) ? 'federation' : 'zeon';
+                    if (updates[`players.${id}.side`] === 'federation') fedCount++;
+                });
+                updates.status = 'mission_briefing';
+                await updateDoc(gameRef, updates);
+            }
+        
+            function renderMissionBriefing(gs) {
+                clearModals();
+                const content = `
+                    <div id="mission-content" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                    <div class="text-center mt-6">
+                        <button id="mission-confirm-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded">確認</button>
+                    </div>`;
+                const modal = createModal('mission-modal', '作戦目標', content);
+                ui.modalContainer.appendChild(modal);
+
+                const scenario = scenarios[gs.scenario];
+                const me = gs.players[localPlayerId];
+                
+                modal.querySelector('#mission-content').innerHTML = `
+                    <div class="bg-blue-900 bg-opacity-50 p-4 rounded">
+                        <h3 class="font-bold text-lg text-blue-300">地球連邦軍 作戦目標</h3>
+                        <p>${scenario.fedMission}</p>
+                    </div>
+                     <div class="bg-green-900 bg-opacity-50 p-4 rounded">
+                        <h3 class="font-bold text-lg text-green-300">ジオン公国軍 作戦目標</h3>
+                        <p>${scenario.zeonMission}</p>
+                    </div>
+                `;
+                const confirmBtn = modal.querySelector('#mission-confirm-btn');
+                confirmBtn.disabled = me.isReady;
+                confirmBtn.textContent = me.isReady ? '相手の確認を待っています...' : '確認';
+                confirmBtn.addEventListener('click', confirmMission);
+            }
+
+            async function confirmMission() {
+                 await updateDoc(doc(db, 'games', localGameState.gameId), { [`players.${localPlayerId}.isReady`]: true });
+            }
+        
+            async function checkAllPlayersReady() {
+                if (!localGameState || !localGameState.players || !localGameState.status) return;
+                const allReady = Object.values(localGameState.players).every(p => p.isReady);
+                if (!allReady) return;
+
+                const gameRef = doc(db, 'games', localGameState.gameId);
+                let updates = {};
+                let logMessage = '';
+                let playersData = { ...localGameState.players };
+                Object.keys(playersData).forEach(k => { playersData[k].isReady = false; });
+                updates.players = playersData;
+
+                if (localGameState.status === 'mission_briefing') {
+                    updates.status = 'deck_building';
+                    logMessage = "全プレイヤー作戦目標確認。デッキ構築を開始します。";
+                    Object.keys(playersData).forEach(k => { playersData[k].diceRoll = null; });
+                    dealInitialCards(playersData);
+                } else if (localGameState.status === 'deck_building') {
+                    updates.status = 'placement';
+                    logMessage = "全プレイヤーデッキ確定。ユニット配置を開始します。";
+                }
+                 else if (localGameState.status === 'placement') {
+                    updates.status = 'strategy';
+                    logMessage = "全プレイヤー配置完了。戦略フェーズ開始！";
+                    updates.currentPlayerSide = 'federation';
+                    updates.turn = 1;
+                }
+                
+                if (updates.status) {
+                    updates.log = [...localGameState.log, logMessage];
+                    await updateDoc(gameRef, updates);
+                }
+            }
+        
+            function dealInitialCards(playersData) {
+                Object.values(playersData).forEach(player => {
+                    const side = player.side;
+                    const shuffledMS = [...allCards.ms.filter(c => c.side === side)].sort(() => 0.5 - Math.random());
+                    
+                    player.hand = {
+                        warships: [...allCards.warships.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 2).map(c => ({...c, handId: `warship-${c.id}-${Math.random()}`})),
+                        ms: shuffledMS.slice(0, 8).map(c => ({...c, handId: `ms-${c.id}-${Math.random()}`, pilot: null})),
+                        pilots: [...allCards.pilots.filter(c => c.side === side)].sort(() => 0.5 - Math.random()).slice(0, 3).map(c => ({...c, handId: `pilot-${c.id}-${Math.random()}`})),
+                    };
+                    player.graveyard = [];
+                    player.deck = [];
+                });
+            }
+        
+            function renderGameUI() {
+                if(!document.getElementById('game-board').children.length) renderBoard();
+                renderAllUnits();
+                renderPlayerInfo();
+                updateGameInfo();
+                updateLog();
+                
+                const phase = localGameState.phase;
+                if (phase === 'deck_building') renderDeckBuilding();
+                else if (phase === 'placement') renderPlacement();
+            }
+
+            function renderDeckBuilding() {
+                 const player = localGameState.players?.[localPlayerId];
+                if (!player || !player.hand) return;
+                
+                let totalCost = player.hand.ms.reduce((sum, ms) => sum + ms.cost, 0);
+
+                ui.game.deckBuildInfo.innerHTML = `
+                    <span class="mr-4">MSコスト: <span class="${totalCost > 10 ? 'cost-over' : ''}">${totalCost}</span> / 10</span>
+                    <button id="confirm-deck-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded disabled:bg-gray-500" ${totalCost > 10 ? 'disabled' : ''}>デッキ確定</button>
+                `;
+                document.getElementById('confirm-deck-btn').addEventListener('click', confirmDeck);
+
+                const msHtml = player.hand.ms.map(c => renderCard(c, 'ms')).join('');
+                const pilotsHtml = player.hand.pilots.map(c => renderCard(c, 'pilot')).join('');
+
+                ui.game.handArea.innerHTML = `
+                    <div class="w-full">
+                        <h4 class="text-sm font-bold text-gray-400 mb-2">MS/MA (クリックしてコスト10以下にする)</h4>
+                        <div class="flex space-x-2">${msHtml}</div>
+                        <h4 class="text-sm font-bold text-gray-400 mt-4 mb-2">パイロット (ドラッグしてMSに乗せる)</h4>
+                        <div class="flex space-x-2">${pilotsHtml}</div>
+                    </div>
+                `;
+                addDeckBuildingEventListeners();
+            }
+
+            function renderPlacement() {
+                const player = localGameState.players?.[localPlayerId];
+                if (!player || !player.deck) return;
+
+                ui.game.deckBuildInfo.innerHTML = `<button id="placement-done-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded">配置完了</button>`;
+                document.getElementById('placement-done-btn').addEventListener('click', confirmPlacement);
+
+                ui.game.handArea.innerHTML = player.deck.filter(c => !c.isPlaced).map(c => renderCard(c, c.capacity !== undefined ? 'warship' : 'ms')).join('');
+                
+                document.querySelectorAll('.hand-card').forEach(cardEl => {
+                    cardEl.addEventListener('click', () => {
+                        selectedHandCardId = cardEl.dataset.handId;
+                        highlightPlacementZone();
+                    });
+                });
+            }
+
+            function renderCard(card, type) {
+                let pilotInfo = '';
+                if (type === 'ms' && card.pilot) {
+                    pilotInfo = `<img src="${card.pilot.img}" class="w-6 h-6 rounded-full absolute -top-1 -right-1 border-2 border-yellow-400">`;
+                }
+                return `
+                    <div data-hand-id="${card.handId}" data-card-type="${type}" draggable="${type === 'pilot'}" class="hand-card ${type}-card bg-gray-800 p-2 rounded w-32 flex-shrink-0 relative">
+                        <img src="${card.img}" class="w-full h-16 object-cover rounded-sm mb-2 pointer-events-none" onerror="this.src='https://placehold.co/80x80/e2e8f0/4a5568?text=NO+IMG';">
+                        <p class="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis pointer-events-none">${card.name}</p>
+                        ${type === 'ms' ? `<p class="text-xs text-gray-400 pointer-events-none">Cost: ${card.cost}</p>` : ''}
+                        ${pilotInfo}
+                    </div>`;
+            }
+
+            function addDeckBuildingEventListeners() {
+                document.querySelectorAll('.ms-card').forEach(cardEl => {
+                    cardEl.addEventListener('click', () => discardMsCard(cardEl.dataset.handId));
+                    cardEl.addEventListener('dragover', (e) => e.preventDefault());
+                    cardEl.addEventListener('drop', (e) => dropPilotOnMs(e, cardEl.dataset.handId));
+                });
+                document.querySelectorAll('.pilot-card').forEach(cardEl => {
+                    cardEl.addEventListener('dragstart', (e) => (draggedPilotId = cardEl.dataset.handId));
+                });
+            }
+            
+            async function discardMsCard(handId) {
+                const player = localGameState.players[localPlayerId];
+                const cardToDiscard = player.hand.ms.find(c => c.handId === handId);
+                if (!cardToDiscard) return;
+                const newMsHand = player.hand.ms.filter(c => c.handId !== handId);
+                const newGraveyard = [...(player.graveyard || []), cardToDiscard];
+                await updateDoc(doc(db, 'games', localGameState.gameId), {
+                    [`players.${localPlayerId}.hand.ms`]: newMsHand,
+                    [`players.${localPlayerId}.graveyard`]: newGraveyard,
+                });
+            }
+
+            async function dropPilotOnMs(event, msHandId) {
+                event.preventDefault();
+                if (!draggedPilotId) return;
+                const player = localGameState.players[localPlayerId];
+                const pilotCard = player.hand.pilots.find(p => p.handId === draggedPilotId);
+                const msCard = player.hand.ms.find(m => m.handId === msHandId);
+                if (!pilotCard || !msCard) return;
+
+                player.hand.ms.forEach(m => {
+                    if(m.pilot && m.pilot.handId === draggedPilotId) m.pilot = null;
+                });
+                msCard.pilot = pilotCard;
+                
+                await updateDoc(doc(db, 'games', localGameState.gameId), {
+                     [`players.${localPlayerId}.hand.ms`]: player.hand.ms,
+                });
+                draggedPilotId = null;
+            }
+
+            async function confirmDeck() {
+                await updateDoc(doc(db, 'games', localGameState.gameId), {
+                    [`players.${localPlayerId}.isReady`]: true,
+                });
+            }
+            
+            async function onUnitClick(unitId) {
+                const unit = localGameState.units.find(u => u.id === unitId);
+                if (!unit) return;
+                selectedUnitId = unit.id;
+                renderAllUnits();
+
+                let pilotInfoHtml = unit.pilot ? `<h6 class="font-bold mt-2 text-yellow-400">搭乗員: ${unit.pilot.name}</h6><p class="text-sm pl-2">${unit.pilot.skill}</p>` : '';
+                const weaponInfo = unit.weapons.map(w => `<li>${w.name} (威力:${w.damage} 射程:${w.range})</li>`).join('');
+                
+                ui.game.unitInfo.innerHTML = `
+                    <h4 class="font-bold text-lg">${unit.name}</h4>
+                    <p>HP: ${unit.currentHp} / ${unit.hp}</p>
+                    <p>EN: ${unit.en}</p>
+                    <p>移動力: ${unit.move}</p>
+                    ${pilotInfoHtml}
+                    <h5 class="font-bold mt-2">武装:</h5>
+                    <ul class="list-disc list-inside text-sm">${weaponInfo}</ul>
+                `;
+                ui.game.unitInfo.classList.remove('hidden');
+            }
+
+            async function onHexClick(x,y) {
+                 if (localGameState.phase === 'placement' && selectedHandCardId) {
+                    // Placement logic here
+                 }
+            }
+
+            async function endPhase() {
+                // TODO: Implement phase ending logic
+            }
         });
 
     </script>
